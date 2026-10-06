@@ -5,6 +5,7 @@ import discord
 from discord.ext import commands
 
 import config
+from guild_settings import GuildSettingsStore
 from storage import JsonEventStore
 
 
@@ -14,10 +15,12 @@ class EventBot(commands.Bot):
         # slash commands and buttons don't need privileged intents.
         super().__init__(command_prefix=commands.when_mentioned, intents=discord.Intents.default())
         self.store = JsonEventStore(config.EVENTS_FILE)  # swap for another EventStore later
+        self.guild_settings = GuildSettingsStore(config.GUILD_SETTINGS_FILE)
 
     async def setup_hook(self):
         # Runs once before connecting: load our command modules ("cogs") and sync slash commands.
         await self.load_extension("cogs.events")
+        await self.load_extension("cogs.settings")
         if config.DEV_GUILD_ID:
             guild = discord.Object(id=config.DEV_GUILD_ID)
             self.tree.copy_global_to(guild=guild)  # instant updates in your test server

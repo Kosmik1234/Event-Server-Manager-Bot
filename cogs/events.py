@@ -5,29 +5,14 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-import config
+from checks import is_admin_or_mod
 from storage import Event
 
 
-def is_admin_or_mod():
-    """Slash-command check: allow Administrators or members with the moderator role."""
-
-    def predicate(interaction: discord.Interaction) -> bool:
-        member = interaction.user
-        if not isinstance(member, discord.Member):  # used in a DM
-            return False
-        if member.guild_permissions.administrator:
-            return True
-        # Config value may be a role name or a numeric ID.
-        return any(str(r.id) == config.MODERATOR_ROLE or r.name == config.MODERATOR_ROLE for r in member.roles)
-
-    return app_commands.check(predicate)
-
-
-def find_category(guild: discord.Guild) -> discord.CategoryChannel | None:
-    """Look up the events category by ID or by name."""
+def find_category(guild: discord.Guild, allowed_category_ids: list[int]) -> discord.CategoryChannel | None:
+    """Pick the first configured category (by ID) that still exists."""
     for cat in guild.categories:
-        if str(cat.id) == config.EVENT_CATEGORY or cat.name.lower() == config.EVENT_CATEGORY.lower():
+        if cat.id in allowed_category_ids:
             return cat
     return None
 
@@ -54,9 +39,14 @@ class EventsCog(commands.Cog):
         # Creating channels can take a moment; defer so Discord doesn't time out (3s limit).
         await interaction.response.defer(ephemeral=True)
 
-        category = find_category(guild)
+        allowed_category_ids = self.bot.guild_settings.get_categories(guild.id)
+        if not allowed_category_ids:
+            await interaction.followup.send("No event categories configured yet. Ask an admin to run `/event-category add`.")
+            return
+
+        category = find_category(guild, allowed_category_ids)
         if category is None:
-            await interaction.followup.send(f"Category `{config.EVENT_CATEGORY}` not found. Create it or fix EVENT_CATEGORY.")
+            await interaction.followup.send("None of the configured event categories exist anymore. Fix with `/event-category`.")
             return
 
         # Channel name: lowercase, letters/digits/dashes only.

@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 TOKEN = os.environ.get("DISCORD_BOT_TOKEN")
-EVENT_CATEGORY = os.environ.get("EVENT_CATEGORY", "Events")
 MODERATOR_ROLE = os.environ.get("MODERATOR_ROLE", "Moderator")
 DEV_GUILD_ID = int(os.environ["DEV_GUILD_ID"]) if os.environ.get("DEV_GUILD_ID") else None
 EVENTS_FILE = os.environ.get("EVENTS_FILE", "data/events.json")
+GUILD_SETTINGS_FILE = os.environ.get("GUILD_SETTINGS_FILE", "data/guild_settings.json")

@@ -12,7 +12,6 @@ from pathlib import Path
 @dataclass
 class Event:
     channel_id: int
-    thread_id: int
     guild_id: int
     title: str
     date: str
@@ -20,6 +19,7 @@ class Event:
     description: str
     creator_id: int
     message_id: int | None = None  # the announcement message (set after it's posted)
+    thread_id: int | None = None  # the updates thread (set by the auto-thread listener)
 
 
 class EventStore(ABC):

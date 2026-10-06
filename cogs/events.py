@@ -54,34 +54,29 @@ class EventsCog(commands.Cog):
 
         # Members can see the channel but not type in it; only the bot (and admins/mods
         # via their own permissions) can post. Joining happens via the button, not chat.
+        # The updates thread itself is created separately by the auto-thread listener,
+        # the same way it is for every other channel in this category.
         overwrites = {
             guild.default_role: discord.PermissionOverwrite(
                 send_messages=False, create_public_threads=False, create_private_threads=False
             ),
             guild.me: discord.PermissionOverwrite(
-                send_messages=True, manage_threads=True, create_private_threads=True, send_messages_in_threads=True
+                send_messages=True, manage_threads=True, create_public_threads=True, send_messages_in_threads=True
             ),
         }
         channel = await guild.create_text_channel(
             name, category=category, overwrites=overwrites, reason=f"Event created by {interaction.user}"
         )
 
-        # Private thread: only people added to it can see it (and get notified).
-        # invitable=False means regular members can't add others; only mods/bot can.
-        thread = await channel.create_thread(
-            name=f"{name}-updates", type=discord.ChannelType.private_thread, invitable=False
-        )
-        await thread.add_user(interaction.user)  # thread starts with the creator
-
         event = Event(
-            channel_id=channel.id, thread_id=thread.id, guild_id=guild.id, title=title, date=date,
+            channel_id=channel.id, guild_id=guild.id, title=title, date=date,
             location=location, description=description, creator_id=interaction.user.id,
         )
         message = await channel.send(embed=build_embed(event))  # Join button is added in the next step
         event.message_id = message.id
         self.bot.store.save(event)
 
-        await interaction.followup.send(f"Event created: {channel.mention} (updates thread: {thread.mention})")
+        await interaction.followup.send(f"Event created: {channel.mention}")
 
     @create_event.error
     async def create_event_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError):

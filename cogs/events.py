@@ -1,0 +1,105 @@
+"""The /create-event command."""
+import re
+
+import discord
+from discord import app_commands
+from discord.ext import commands
+
+import config
+from storage import Event
+
+
+def is_admin_or_mod():
+    """Slash-command check: allow Administrators or members with the moderator role."""
+
+    def predicate(interaction: discord.Interaction) -> bool:
+        member = interaction.user
+        if not isinstance(member, discord.Member):  # used in a DM
+            return False
+        if member.guild_permissions.administrator:
+            return True
+        # Config value may be a role name or a numeric ID.
+        return any(str(r.id) == config.MODERATOR_ROLE or r.name == config.MODERATOR_ROLE for r in member.roles)
+
+    return app_commands.check(predicate)
+
+
+def find_category(guild: discord.Guild) -> discord.CategoryChannel | None:
+    """Look up the events category by ID or by name."""
+    for cat in guild.categories:
+        if str(cat.id) == config.EVENT_CATEGORY or cat.name.lower() == config.EVENT_CATEGORY.lower():
+            return cat
+    return None
+
+
+def build_embed(event: Event) -> discord.Embed:
+    embed = discord.Embed(title=event.title, description=event.description, color=discord.Color.blurple())
+    embed.add_field(name="📅 When", value=event.date, inline=True)
+    embed.add_field(name="📍 Where", value=event.location, inline=True)
+    return embed
+
+
+class EventsCog(commands.Cog):
+    def __init__(self, bot: commands.Bot):
+        self.bot = bot
+
+    @app_commands.command(name="create-event", description="Create a new event channel (admins/mods only)")
+    @app_commands.describe(title="Event name", date="When it happens", location="Where it happens", description="Details")
+    @app_commands.guild_only()
+    @is_admin_or_mod()
+    async def create_event(
+        self, interaction: discord.Interaction, title: str, date: str, location: str, description: str
+    ):
+        guild = interaction.guild
+        # Creating channels can take a moment; defer so Discord doesn't time out (3s limit).
+        await interaction.response.defer(ephemeral=True)
+
+        category = find_category(guild)
+        if category is None:
+            await interaction.followup.send(f"Category `{config.EVENT_CATEGORY}` not found. Create it or fix EVENT_CATEGORY.")
+            return
+
+        # Channel name: lowercase, letters/digits/dashes only.
+        name = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")[:90] or "event"
+
+        # Members can see the channel but not type in it; only the bot (and admins/mods
+        # via their own permissions) can post. Joining happens via the button, not chat.
+        overwrites = {
+            guild.default_role: discord.PermissionOverwrite(
+                send_messages=False, create_public_threads=False, create_private_threads=False
+            ),
+            guild.me: discord.PermissionOverwrite(
+                send_messages=True, manage_threads=True, create_private_threads=True, send_messages_in_threads=True
+            ),
+        }
+        channel = await guild.create_text_channel(
+            name, category=category, overwrites=overwrites, reason=f"Event created by {interaction.user}"
+        )
+
+        # Private thread: only people added to it can see it (and get notified).
+        # invitable=False means regular members can't add others; only mods/bot can.
+        thread = await channel.create_thread(
+            name=f"{name}-updates", type=discord.ChannelType.private_thread, invitable=False
+        )
+        await thread.add_user(interaction.user)  # thread starts with the creator
+
+        event = Event(
+            channel_id=channel.id, thread_id=thread.id, guild_id=guild.id, title=title, date=date,
+            location=location, description=description, creator_id=interaction.user.id,
+        )
+        message = await channel.send(embed=build_embed(event))  # Join button is added in the next step
+        event.message_id = message.id
+        self.bot.store.save(event)
+
+        await interaction.followup.send(f"Event created: {channel.mention} (updates thread: {thread.mention})")
+
+    @create_event.error
+    async def create_event_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError):
+        if isinstance(error, app_commands.CheckFailure):
+            await interaction.response.send_message("Only admins or moderators can create events.", ephemeral=True)
+        else:
+            raise error
+
+
+async def setup(bot: commands.Bot):
+    await bot.add_cog(EventsCog(bot))

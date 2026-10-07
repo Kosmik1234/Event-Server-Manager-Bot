@@ -1,4 +1,5 @@
 """The /create-event command."""
+import logging
 import re
 
 import discord
@@ -65,17 +66,28 @@ class EventsCog(commands.Cog):
                 send_messages=True, manage_threads=True, create_private_threads=True, send_messages_in_threads=True
             ),
         }
-        channel = await guild.create_text_channel(
-            name, category=category, overwrites=overwrites, reason=f"Event created by {interaction.user}"
-        )
+        try:
+            channel = await guild.create_text_channel(
+                name, category=category, overwrites=overwrites, reason=f"Event created by {interaction.user}"
+            )
 
-        event = Event(
-            channel_id=channel.id, guild_id=guild.id, title=title, date=date,
-            location=location, description=description, creator_id=interaction.user.id,
-        )
-        message = await channel.send(embed=build_embed(event))  # Join button is added in the next step
-        event.message_id = message.id
-        self.bot.store.save(event)
+            event = Event(
+                channel_id=channel.id, guild_id=guild.id, title=title, date=date,
+                location=location, description=description, creator_id=interaction.user.id,
+            )
+            message = await channel.send(embed=build_embed(event))  # Join button is added in the next step
+            event.message_id = message.id
+            self.bot.store.save(event)
+        except discord.Forbidden:
+            await interaction.followup.send(
+                "I don't have permission to do that here. My role needs Manage Channels, Manage Threads, "
+                "Create Private Threads, Send Messages and Embed Links on this category."
+            )
+            return
+        except discord.HTTPException:
+            logging.exception("Failed to create event channel")
+            await interaction.followup.send("Something went wrong creating the channel. Check the bot's logs.")
+            return
 
         await interaction.followup.send(f"Event created: {channel.mention}")
 

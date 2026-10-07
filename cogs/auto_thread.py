@@ -6,6 +6,8 @@ with permission to create channels there — no command needed.
 The thread is private: regular members can't see it. Only members explicitly
 added to it, or anyone with the Manage Threads permission (admins, and any other
 bot whose role is granted that permission), can see and post in it."""
+import logging
+
 import discord
 from discord.ext import commands
 
@@ -16,20 +18,38 @@ class AutoThreadCog(commands.Cog):
 
     @commands.Cog.listener()
     async def on_guild_channel_create(self, channel: discord.abc.GuildChannel):
+        logging.info("on_guild_channel_create fired for #%s (%s), type=%s", channel.name, channel.id, channel.type)
+
         if not isinstance(channel, discord.TextChannel) or channel.category_id is None:
+            logging.info("Skipping #%s: not a text channel, or not inside any category", channel.name)
             return
         if channel.category_id not in self.bot.guild_settings.get_categories(channel.guild.id):
+            logging.info("Skipping #%s: category %s is not in the configured list", channel.name, channel.category_id)
             return
 
-        thread = await channel.create_thread(
-            name=f"{channel.name}-updates", type=discord.ChannelType.private_thread, invitable=False
-        )
+        logging.info("Creating update thread in #%s (%s)", channel.name, channel.id)
+        try:
+            thread = await channel.create_thread(
+                name=f"{channel.name}-updates", type=discord.ChannelType.private_thread, invitable=False
+            )
+        except discord.Forbidden:
+            logging.error(
+                "Missing permissions to create a thread in #%s (%s). The bot's role needs "
+                "Create Private Threads and Manage Threads here.", channel.name, channel.id,
+            )
+            return
+        except discord.HTTPException:
+            logging.exception("Failed to create update thread in #%s", channel.name)
+            return
+
+        logging.info("Created thread #%s (%s) in #%s", thread.name, thread.id, channel.name)
 
         # If this channel belongs to an event created via /create-event, link the thread to it.
         event = self.bot.store.get_by_channel(channel.id)
         if event is not None:
             event.thread_id = thread.id
             self.bot.store.save(event)
+            logging.info("Linked thread %s to the event in #%s", thread.id, channel.name)
 
 
 async def setup(bot: commands.Bot):

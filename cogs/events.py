@@ -61,7 +61,7 @@ class EventsCog(commands.Cog):
                 send_messages=False, create_public_threads=False, create_private_threads=False
             ),
             guild.me: discord.PermissionOverwrite(
-                send_messages=True, manage_threads=True, create_public_threads=True, send_messages_in_threads=True
+                send_messages=True, manage_threads=True, create_private_threads=True, send_messages_in_threads=True
             ),
         }
         channel = await guild.create_text_channel(

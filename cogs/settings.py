@@ -15,9 +15,10 @@ class SettingsCog(
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @app_commands.command(name="add", description="Allow event channels to be created in this category")
+    @app_commands.command(name="add", description="Allow event channels to be created in this category (admins/mods only)")
     @app_commands.guild_only()
-    @is_admin_or_mod()
+    @app_commands.default_permissions(manage_guild=True)  # hides it from the picker for regular members by default
+    @is_admin_or_mod()  # the actual enforcement; Discord's default_permissions is just UI-level and admin-overridable
     async def add(self, interaction: discord.Interaction, category: discord.CategoryChannel):
         added = self.bot.guild_settings.add_category(interaction.guild_id, category.id)
         if added:
@@ -25,9 +26,10 @@ class SettingsCog(
         else:
             await interaction.response.send_message(f"{category.mention} is already allowed.", ephemeral=True)
 
-    @app_commands.command(name="remove", description="Stop allowing event channels in this category")
+    @app_commands.command(name="remove", description="Stop allowing event channels in this category (admins/mods only)")
     @app_commands.guild_only()
-    @is_admin_or_mod()
+    @app_commands.default_permissions(manage_guild=True)  # hides it from the picker for regular members by default
+    @is_admin_or_mod()  # the actual enforcement; Discord's default_permissions is just UI-level and admin-overridable
     async def remove(self, interaction: discord.Interaction, category: discord.CategoryChannel):
         removed = self.bot.guild_settings.remove_category(interaction.guild_id, category.id)
         if removed:
@@ -37,7 +39,6 @@ class SettingsCog(
 
     @app_commands.command(name="list", description="List categories where event channels can be created")
     @app_commands.guild_only()
-    @is_admin_or_mod()
     async def list_categories(self, interaction: discord.Interaction):
         ids = self.bot.guild_settings.get_categories(interaction.guild_id)
         if not ids:

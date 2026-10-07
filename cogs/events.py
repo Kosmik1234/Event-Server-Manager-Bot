@@ -31,7 +31,8 @@ class EventsCog(commands.Cog):
     @app_commands.command(name="create-event", description="Create a new event channel (admins/mods only)")
     @app_commands.describe(title="Event name", date="When it happens", location="Where it happens", description="Details")
     @app_commands.guild_only()
-    @is_admin_or_mod()
+    @app_commands.default_permissions(manage_guild=True)  # hides it from the picker for regular members by default
+    @is_admin_or_mod()  # the actual enforcement; Discord's default_permissions is just UI-level and admin-overridable
     async def create_event(
         self, interaction: discord.Interaction, title: str, date: str, location: str, description: str
     ):

@@ -1,4 +1,4 @@
-"""The green "Join Event" button.
+"""The green "Join Event" and red "Leave Event" buttons.
 
 The thread ID is baked into the button's custom_id ("join-event:<thread_id>"), so the
 button needs no database lookup and keeps working after the bot restarts. This is what
@@ -39,12 +39,43 @@ class JoinButton(discord.ui.DynamicItem[discord.ui.Button], template=r"join-even
         await interaction.response.send_message(f"You've joined the event! See {thread.mention}", ephemeral=True)
 
 
+class LeaveButton(discord.ui.DynamicItem[discord.ui.Button], template=r"leave-event:(?P<thread_id>[0-9]+)"):
+    """Red counterpart of JoinButton: removes the member from the thread."""
+
+    def __init__(self, thread_id: int):
+        super().__init__(
+            discord.ui.Button(label="Leave Event", style=discord.ButtonStyle.danger, custom_id=f"leave-event:{thread_id}")
+        )
+        self.thread_id = thread_id
+
+    @classmethod
+    async def from_custom_id(cls, interaction: discord.Interaction, item: discord.ui.Button, match):
+        return cls(int(match["thread_id"]))
+
+    async def callback(self, interaction: discord.Interaction):
+        thread = interaction.guild.get_thread(self.thread_id)
+        try:
+            if thread is None:
+                thread = await interaction.guild.fetch_channel(self.thread_id)
+            await thread.remove_user(interaction.user)
+        except discord.NotFound:
+            await interaction.response.send_message("This event's thread no longer exists.", ephemeral=True)
+            return
+        except discord.HTTPException:
+            logging.exception("Failed to remove %s from thread %s", interaction.user, self.thread_id)
+            await interaction.response.send_message("Couldn't remove you from the event thread. Try again later.", ephemeral=True)
+            return
+
+        await interaction.response.send_message("You've left the event.", ephemeral=True)
+
+
 def join_view(thread_id: int) -> discord.ui.View:
-    """A view holding the Join button, to attach to a message."""
-    view = discord.ui.View(timeout=None)  # timeout=None: the button never expires
+    """A view holding the Join and Leave buttons, to attach to a message."""
+    view = discord.ui.View(timeout=None)  # timeout=None: the buttons never expire
     view.add_item(JoinButton(thread_id))
+    view.add_item(LeaveButton(thread_id))
     return view
 
 
 async def setup(bot: commands.Bot):
-    bot.add_dynamic_items(JoinButton)
+    bot.add_dynamic_items(JoinButton, LeaveButton)

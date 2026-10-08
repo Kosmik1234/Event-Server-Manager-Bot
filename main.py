@@ -21,6 +21,7 @@ class EventBot(commands.Bot):
         # Runs once before connecting: load our command modules ("cogs") and sync slash commands.
         await self.load_extension("cogs.events")
         await self.load_extension("cogs.settings")
+        await self.load_extension("cogs.join")
         await self.load_extension("cogs.auto_thread")
         if config.DEV_GUILD_ID:
             guild = discord.Object(id=config.DEV_GUILD_ID)

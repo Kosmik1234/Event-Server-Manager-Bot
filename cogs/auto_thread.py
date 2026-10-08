@@ -11,6 +11,8 @@ import logging
 import discord
 from discord.ext import commands
 
+from cogs.join import join_view
+
 
 class AutoThreadCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -43,6 +45,12 @@ class AutoThreadCog(commands.Cog):
             return
 
         logging.info("Created thread #%s (%s) in #%s", thread.name, thread.id, channel.name)
+
+        # Post the green Join Event button in the channel; clicking it adds the member to the thread.
+        try:
+            await channel.send("Click the button to join this event and get its updates.", view=join_view(thread.id))
+        except discord.HTTPException:
+            logging.exception("Failed to post the join button in #%s", channel.name)
 
         # If this channel belongs to an event created via /create-event, link the thread to it.
         event = self.bot.store.get_by_channel(channel.id)

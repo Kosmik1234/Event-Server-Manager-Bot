@@ -50,6 +50,14 @@ class AutoThreadCog(commands.Cog):
             event.thread_id = thread.id
             self.bot.store.save(event)
             logging.info("Linked thread %s to the event in #%s", thread.id, channel.name)
+            # A private thread is invisible to everyone not in it, so add the creator;
+            # otherwise a mod without Manage Threads would never see it.
+            creator = channel.guild.get_member(event.creator_id)
+            if creator is not None:
+                try:
+                    await thread.add_user(creator)
+                except discord.HTTPException:
+                    logging.exception("Could not add creator %s to thread %s", event.creator_id, thread.id)
 
 
 async def setup(bot: commands.Bot):

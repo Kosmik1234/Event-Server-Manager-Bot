@@ -75,6 +75,9 @@ class EventsCog(commands.Cog):
                 channel_id=channel.id, guild_id=guild.id, title=title, date=date,
                 location=location, description=description, creator_id=interaction.user.id,
             )
+            # Save BEFORE posting the message: the auto-thread listener fires as soon as the
+            # channel exists and looks this event up to link the thread and add the creator.
+            self.bot.store.save(event)
             message = await channel.send(embed=build_embed(event))  # Join button is added in the next step
             event.message_id = message.id
             self.bot.store.save(event)

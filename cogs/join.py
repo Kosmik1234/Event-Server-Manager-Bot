@@ -10,6 +10,19 @@ import discord
 from discord.ext import commands
 
 
+async def update_participant_count(thread: discord.Thread) -> None:
+    """Recomputes thread membership and edits the pinned "Participants: N" message.
+    Called after anyone joins/leaves. N excludes the bot itself."""
+    try:
+        members = await thread.fetch_members()
+        count = max(len(members) - 1, 0)  # -1 for the bot, which is always a member of its own thread
+        pins = await thread.pins()
+        if pins:
+            await pins[0].edit(content=f"Participants: {count}")
+    except discord.HTTPException:
+        logging.exception("Failed to update participant count for thread %s", thread.id)
+
+
 class JoinButton(discord.ui.DynamicItem[discord.ui.Button], template=r"join-event:(?P<thread_id>[0-9]+)"):
     def __init__(self, thread_id: int):
         super().__init__(
@@ -36,6 +49,7 @@ class JoinButton(discord.ui.DynamicItem[discord.ui.Button], template=r"join-even
             await interaction.response.send_message("Couldn't add you to the event thread. Try again later.", ephemeral=True)
             return
 
+        await update_participant_count(thread)
         await interaction.response.send_message(f"You've joined the event! See {thread.mention}", ephemeral=True)
 
 
@@ -66,6 +80,7 @@ class LeaveButton(discord.ui.DynamicItem[discord.ui.Button], template=r"leave-ev
             await interaction.response.send_message("Couldn't remove you from the event thread. Try again later.", ephemeral=True)
             return
 
+        await update_participant_count(thread)
         await interaction.response.send_message("You've left the event.", ephemeral=True)
 
 

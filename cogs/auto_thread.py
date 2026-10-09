@@ -11,7 +11,7 @@ import logging
 import discord
 from discord.ext import commands
 
-from cogs.join import join_view
+from cogs.join import join_view, update_participant_count
 
 
 class AutoThreadCog(commands.Cog):
@@ -46,6 +46,13 @@ class AutoThreadCog(commands.Cog):
 
         logging.info("Created thread #%s (%s) in #%s", thread.name, thread.id, channel.name)
 
+        # Pinned "Participants: N" message in the thread, kept up to date by the join/leave buttons.
+        try:
+            count_message = await thread.send("Participants: 0")
+            await count_message.pin()
+        except discord.HTTPException:
+            logging.exception("Failed to post the participant counter in thread %s", thread.id)
+
         # Post the green Join Event button in the channel; clicking it adds the member to the thread.
         try:
             await channel.send("Click the button to join this event and get its updates.", view=join_view(thread.id))
@@ -64,6 +71,7 @@ class AutoThreadCog(commands.Cog):
             if creator is not None:
                 try:
                     await thread.add_user(creator)
+                    await update_participant_count(thread)
                 except discord.HTTPException:
                     logging.exception("Could not add creator %s to thread %s", event.creator_id, thread.id)
 

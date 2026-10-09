@@ -12,7 +12,9 @@ from discord.ext import commands
 
 async def update_participant_count(thread: discord.Thread) -> None:
     """Recomputes thread membership and edits the pinned "Participants: N" message.
-    Called after anyone joins/leaves. N excludes the bot itself."""
+    Called by the on_thread_member_join/remove listeners in auto_thread.py, which fire for
+    ANY membership change — this button, manual add/remove in Discord's UI, etc. N excludes
+    the bot itself."""
     try:
         members = await thread.fetch_members()
         count = max(len(members) - 1, 0)  # -1 for the bot, which is always a member of its own thread
@@ -49,7 +51,6 @@ class JoinButton(discord.ui.DynamicItem[discord.ui.Button], template=r"join-even
             await interaction.response.send_message("Couldn't add you to the event thread. Try again later.", ephemeral=True)
             return
 
-        await update_participant_count(thread)
         await interaction.response.send_message(f"You've joined the event! See {thread.mention}", ephemeral=True)
 
 
@@ -80,7 +81,6 @@ class LeaveButton(discord.ui.DynamicItem[discord.ui.Button], template=r"leave-ev
             await interaction.response.send_message("Couldn't remove you from the event thread. Try again later.", ephemeral=True)
             return
 
-        await update_participant_count(thread)
         await interaction.response.send_message("You've left the event.", ephemeral=True)
 
 

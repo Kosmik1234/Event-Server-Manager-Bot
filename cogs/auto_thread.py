@@ -70,10 +70,29 @@ class AutoThreadCog(commands.Cog):
             creator = channel.guild.get_member(event.creator_id)
             if creator is not None:
                 try:
-                    await thread.add_user(creator)
-                    await update_participant_count(thread)
+                    await thread.add_user(creator)  # triggers on_thread_member_join below, which updates the counter
                 except discord.HTTPException:
                     logging.exception("Could not add creator %s to thread %s", event.creator_id, thread.id)
+
+    async def _handle_membership_change(self, thread_id: int):
+        """Common path for on_thread_member_join/remove: recompute the participant counter.
+        These events fire for ANY membership change — our buttons, a manual "Leave Thread" in
+        Discord's UI, a mod manually adding someone — so this is the single source of truth,
+        not the buttons themselves."""
+        thread = self.bot.get_channel(thread_id)
+        if thread is None or thread.parent is None:
+            return
+        if thread.parent.category_id not in self.bot.guild_settings.get_categories(thread.guild.id):
+            return
+        await update_participant_count(thread)
+
+    @commands.Cog.listener()
+    async def on_thread_member_join(self, member: discord.ThreadMember):
+        await self._handle_membership_change(member.thread_id)
+
+    @commands.Cog.listener()
+    async def on_thread_member_remove(self, member: discord.ThreadMember):
+        await self._handle_membership_change(member.thread_id)
 
 
 async def setup(bot: commands.Bot):

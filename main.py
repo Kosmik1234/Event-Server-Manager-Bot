@@ -13,7 +13,12 @@ class EventBot(commands.Bot):
     def __init__(self):
         # Intents say which Discord events we want. Default intents are enough:
         # slash commands and buttons don't need privileged intents.
-        super().__init__(command_prefix=commands.when_mentioned, intents=discord.Intents.default())
+        intents = discord.Intents.default()
+        # Privileged intent: needed to receive thread member join/leave events and to list
+        # thread members. Must ALSO be enabled in the Developer Portal -> Bot -> Privileged
+        # Gateway Intents -> "Server Members Intent", or the bot won't start.
+        intents.members = True
+        super().__init__(command_prefix=commands.when_mentioned, intents=intents)
         self.store = JsonEventStore(config.EVENTS_FILE)  # swap for another EventStore later
         self.guild_settings = GuildSettingsStore(config.GUILD_SETTINGS_FILE)
 

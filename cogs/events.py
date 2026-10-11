@@ -80,8 +80,6 @@ class EventsCog(commands.Cog):
             # channel exists and looks this event up to link the thread and add the creator.
             self.bot.store.save(event)
             message = await channel.send(embed=build_embed(event))  # Join button is added in the next step
-            # Re-read: the listener may have added thread_id / join_message_id in the meantime.
-            event = self.bot.store.get_by_channel(channel.id) or event
             event.message_id = message.id
             self.bot.store.save(event)
         except discord.Forbidden:

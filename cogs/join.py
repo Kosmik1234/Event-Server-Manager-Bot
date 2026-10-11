@@ -10,33 +10,17 @@ import discord
 from discord.ext import commands
 
 
-async def get_participants_count(thread: discord.Thread) -> int | None:
-    """Number of members in the thread, excluding the bot. None if the API call failed."""
-    try:
-        members = await thread.fetch_members()  # needs the privileged Server Members intent
-    except discord.HTTPException:
-        logging.exception("Failed to receive participant count for thread %s", thread.id)
-        return None
-    return max(len(members) - 1, 0)  # -1 for the bot, which is always a member of its own thread
-
-
-def counter_text(count: int) -> str:
-    return f"👥 Participants: {count}"
-
-
-async def update_participant_count(store, thread: discord.Thread) -> None:
-    """Recomputes thread membership and edits the pinned join message in the event channel.
+async def update_participant_count(thread: discord.Thread) -> None:
+    """Recomputes thread membership and edits the pinned "Participants: N" message.
     Called by the on_thread_member_join/remove listeners in auto_thread.py, which fire for
-    ANY membership change - these buttons, manual add/remove in Discord's UI, etc. N excludes
+    ANY membership change — this button, manual add/remove in Discord's UI, etc. N excludes
     the bot itself."""
-    event = store.get_by_thread(thread.id)
-    if event is None or event.join_message_id is None or thread.parent is None:
-        return
-    count = await get_participants_count(thread)
-    if count is None:
-        return
     try:
-        await thread.parent.get_partial_message(event.join_message_id).edit(content=counter_text(count))
+        members = await thread.fetch_members()
+        count = max(len(members) - 1, 0)  # -1 for the bot, which is always a member of its own thread
+        pins = await thread.pins()
+        if pins:
+            await pins[0].edit(content=f"Participants: {count}")
     except discord.HTTPException:
         logging.exception("Failed to update participant count for thread %s", thread.id)
 

@@ -11,8 +11,7 @@ import logging
 import discord
 from discord.ext import commands
 
-from cogs.join import counter_text, join_view, update_participant_count
-from storage import Event
+from cogs.join import join_view, update_participant_count
 
 
 class AutoThreadCog(commands.Cog):
@@ -47,33 +46,33 @@ class AutoThreadCog(commands.Cog):
 
         logging.info("Created thread #%s (%s) in #%s", thread.name, thread.id, channel.name)
 
-        # Every channel with a thread gets a stored record. /create-event already saved one
-        # (with details); for channels made by hand we create a bare one.
-        event = self.bot.store.get_by_channel(channel.id) or Event(
-            channel_id=channel.id, guild_id=channel.guild.id, title=channel.name
-        )
-        event.thread_id = thread.id
-
-        # Pinned message in the channel: the Join/Leave buttons plus the participant count,
-        # which on_thread_member_join/remove keep up to date.
+        # Pinned "Participants: N" message in the thread, kept up to date by the join/leave buttons.
         try:
-            join_message = await channel.send(counter_text(0), view=join_view(thread.id))
-            event.join_message_id = join_message.id
-            await join_message.pin()
+            count_message = await thread.send("Participants: 0")
+            await count_message.pin()
         except discord.HTTPException:
-            logging.exception("Failed to post or pin the join message in #%s", channel.name)
+            logging.exception("Failed to post the participant counter in thread %s", thread.id)
 
-        self.bot.store.save(event)  # saved before add_user so the counter update can find the message
-        logging.info("Stored event for #%s (thread %s)", channel.name, thread.id)
+        # Post the green Join Event button in the channel; clicking it adds the member to the thread.
+        try:
+            await channel.send("Click the button to join this event and get its updates.", view=join_view(thread.id))
+        except discord.HTTPException:
+            logging.exception("Failed to post the join button in #%s", channel.name)
 
-        # A private thread is invisible to everyone not in it, so add the creator (when known);
-        # otherwise a mod without Manage Threads would never see it.
-        creator = channel.guild.get_member(event.creator_id) if event.creator_id else None
-        if creator is not None:
-            try:
-                await thread.add_user(creator)  # triggers on_thread_member_join, which updates the counter
-            except discord.HTTPException:
-                logging.exception("Could not add creator %s to thread %s", event.creator_id, thread.id)
+        # If this channel belongs to an event created via /create-event, link the thread to it.
+        event = self.bot.store.get_by_channel(channel.id)
+        if event is not None:
+            event.thread_id = thread.id
+            self.bot.store.save(event)
+            logging.info("Linked thread %s to the event in #%s", thread.id, channel.name)
+            # A private thread is invisible to everyone not in it, so add the creator;
+            # otherwise a mod without Manage Threads would never see it.
+            creator = channel.guild.get_member(event.creator_id)
+            if creator is not None:
+                try:
+                    await thread.add_user(creator)  # triggers on_thread_member_join below, which updates the counter
+                except discord.HTTPException:
+                    logging.exception("Could not add creator %s to thread %s", event.creator_id, thread.id)
 
     async def _handle_membership_change(self, thread_id: int):
         """Common path for on_thread_member_join/remove: recompute the participant counter.
@@ -81,18 +80,19 @@ class AutoThreadCog(commands.Cog):
         Discord's UI, a mod manually adding someone — so this is the single source of truth,
         not the buttons themselves."""
         thread = self.bot.get_channel(thread_id)
-        if thread is None:
+        if thread is None or thread.parent is None:
             return
-        await update_participant_count(self.bot.store, thread)  # ignores threads we don't track
+        if thread.parent.category_id not in self.bot.guild_settings.get_categories(thread.guild.id):
+            return
+        await update_participant_count(thread)
 
     @commands.Cog.listener()
     async def on_thread_member_join(self, member: discord.ThreadMember):
         await self._handle_membership_change(member.thread_id)
 
     @commands.Cog.listener()
-    async def on_raw_thread_member_remove(self, payload: discord.RawThreadMembersUpdate):
-        # Raw variant: the non-raw on_thread_member_remove only fires if the member was cached.
-        await self._handle_membership_change(payload.thread_id)
+    async def on_thread_member_remove(self, member: discord.ThreadMember):
+        await self._handle_membership_change(member.thread_id)
 
 
 async def setup(bot: commands.Bot):

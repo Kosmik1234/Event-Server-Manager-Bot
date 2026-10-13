@@ -28,7 +28,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "already_event": "This channel is already an event.",
         "event_made": "This channel is now an event. Set its date with `/set-date`.",
         # auto thread
-        "thread_suffix": "updates",
+        "thread_suffix": "participants",
         # event-category
         "category_added": "Added {category} to allowed event categories.",
         "category_exists": "{category} is already allowed.",
@@ -78,7 +78,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "not_in_event_category": "Użyj tej komendy na kanale tekstowym w kategorii wydarzeń (zobacz `/event-category list`).",
         "already_event": "Ten kanał jest już wydarzeniem.",
         "event_made": "Ten kanał jest teraz wydarzeniem. Ustaw jego datę przez `/set-date`.",
-        "thread_suffix": "aktualizacje",
+        "thread_suffix": "uczestnicy",
         "category_added": "Dodano {category} do dozwolonych kategorii wydarzeń.",
         "category_exists": "{category} jest już dozwolona.",
         "category_removed": "Usunięto {category} z dozwolonych kategorii wydarzeń.",

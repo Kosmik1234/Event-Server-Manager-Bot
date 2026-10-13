@@ -4,7 +4,7 @@ Bot Discord (Python, `discord.py>=2.6`) zarządzający serwerem poświęconym wy
 
 ## Co robi bot
 
-1. **Kanał w kategorii wydarzeń** (utworzony przez `/create-event` albo ręcznie) → `on_guild_channel_create` automatycznie tworzy w nim **prywatny wątek „aktualności”** (`<nazwa>-updates`, slowmode 300 s, `invitable=False`) oraz **przypiętą wiadomość** z przyciskami **Join/Leave** i licznikiem uczestników.
+1. **Kanał w kategorii wydarzeń** (utworzony przez `/create-event` albo ręcznie) → `on_guild_channel_create` automatycznie tworzy w nim **prywatny wątek uczestników** (`<nazwa>-participants`, po polsku `-uczestnicy`, slowmode 300 s, `invitable=False`) oraz **przypiętą wiadomość** z przyciskami **Join/Leave** i licznikiem uczestników.
 2. **Join** = dodanie użytkownika do wątku (widzi zmiany daty, miejsca, informacje). **Leave** = usunięcie z wątku.
 3. **Licznik uczestników** = liczba członków wątku minus bot. Jedyne źródło prawdy: listenery `on_thread_member_join` / `on_raw_thread_member_remove` (łapią też ręczne zmiany w UI Discorda), nie same przyciski.
 4. **Archiwizacja**: co godzinę (pętla `tasks.loop`) kanały wydarzeń z datą w przeszłości są przenoszone do kategorii-archiwum przypisanej do danej kategorii wydarzeń.

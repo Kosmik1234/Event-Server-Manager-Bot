@@ -5,6 +5,7 @@ import discord
 from discord.ext import commands
 
 import config
+import i18n
 from guild_settings import GuildSettingsStore
 from storage import JsonEventStore
 
@@ -21,6 +22,12 @@ class EventBot(commands.Bot):
         super().__init__(command_prefix=commands.when_mentioned, intents=intents)
         self.store = JsonEventStore(config.EVENTS_FILE)  # swap for another EventStore later
         self.guild_settings = GuildSettingsStore(config.GUILD_SETTINGS_FILE)
+
+    def lang(self, guild: discord.Guild | None) -> str:
+        """The server's chosen language, else its Discord preferred locale, else English."""
+        if guild is None:
+            return i18n.DEFAULT
+        return self.guild_settings.get_language(guild.id) or i18n.from_locale(str(guild.preferred_locale))
 
     async def setup_hook(self):
         # Runs once before connecting: load our command modules ("cogs") and sync slash commands.

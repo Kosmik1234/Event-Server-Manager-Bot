@@ -16,6 +16,14 @@ class GuildSettingsStore:
     def _flush(self) -> None:
         self.path.write_text(json.dumps(self._settings, indent=2), encoding="utf-8")
 
+    def get_language(self, guild_id: int) -> str | None:
+        """None if the server never chose one."""
+        return self._settings.get(str(guild_id), {}).get("language")
+
+    def set_language(self, guild_id: int, language: str) -> None:
+        self._settings.setdefault(str(guild_id), {})["language"] = language
+        self._flush()
+
     def get_categories(self, guild_id: int) -> list[int]:
         return self._settings.get(str(guild_id), {}).get("event_categories", [])
 

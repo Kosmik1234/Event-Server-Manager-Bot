@@ -7,6 +7,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from checks import is_admin_or_mod
+from i18n import t
 from storage import Event
 
 
@@ -18,10 +19,10 @@ def find_category(guild: discord.Guild, allowed_category_ids: list[int]) -> disc
     return None
 
 
-def build_embed(event: Event) -> discord.Embed:
+def build_embed(event: Event, lang: str) -> discord.Embed:
     embed = discord.Embed(title=event.title, description=event.description, color=discord.Color.blurple())
-    embed.add_field(name="📅 When", value=event.date, inline=True)
-    embed.add_field(name="📍 Where", value=event.location, inline=True)
+    embed.add_field(name=t(lang, "field_when"), value=event.date, inline=True)
+    embed.add_field(name=t(lang, "field_where"), value=event.location, inline=True)
     return embed
 
 
@@ -38,17 +39,18 @@ class EventsCog(commands.Cog):
         self, interaction: discord.Interaction, title: str, date: str, location: str, description: str
     ):
         guild = interaction.guild
+        lang = self.bot.lang(guild)
         # Creating channels can take a moment; defer so Discord doesn't time out (3s limit).
         await interaction.response.defer(ephemeral=True)
 
         allowed_category_ids = self.bot.guild_settings.get_categories(guild.id)
         if not allowed_category_ids:
-            await interaction.followup.send("No event categories configured yet. Ask an admin to run `/event-category add`.")
+            await interaction.followup.send(t(lang, "no_categories"))
             return
 
         category = find_category(guild, allowed_category_ids)
         if category is None:
-            await interaction.followup.send("None of the configured event categories exist anymore. Fix with `/event-category`.")
+            await interaction.followup.send(t(lang, "categories_missing"))
             return
 
         # Channel name: lowercase, letters/digits/dashes only.
@@ -79,28 +81,25 @@ class EventsCog(commands.Cog):
             # Save BEFORE posting the message: the auto-thread listener fires as soon as the
             # channel exists and looks this event up to link the thread and add the creator.
             self.bot.store.save(event)
-            message = await channel.send(embed=build_embed(event))  # Join button is added in the next step
+            message = await channel.send(embed=build_embed(event, lang))  # Join button is added in the next step
             # Re-read: the listener may have added thread_id / join_message_id in the meantime.
             event = self.bot.store.get_by_channel(channel.id) or event
             event.message_id = message.id
             self.bot.store.save(event)
         except discord.Forbidden:
-            await interaction.followup.send(
-                "I don't have permission to do that here. My role needs Manage Channels, Manage Threads, "
-                "Create Private Threads, Send Messages and Embed Links on this category."
-            )
+            await interaction.followup.send(t(lang, "no_permission"))
             return
         except discord.HTTPException:
             logging.exception("Failed to create event channel")
-            await interaction.followup.send("Something went wrong creating the channel. Check the bot's logs.")
+            await interaction.followup.send(t(lang, "create_failed"))
             return
 
-        await interaction.followup.send(f"Event created: {channel.mention}")
+        await interaction.followup.send(t(lang, "event_created", channel=channel.mention))
 
     @create_event.error
     async def create_event_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError):
         if isinstance(error, app_commands.CheckFailure):
-            await interaction.response.send_message("Only admins or moderators can create events.", ephemeral=True)
+            await interaction.response.send_message(t(self.bot.lang(interaction.guild), "only_admins_create"), ephemeral=True)
         else:
             raise error
 

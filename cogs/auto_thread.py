@@ -12,6 +12,7 @@ import discord
 from discord.ext import commands
 
 from cogs.join import counter_text, join_view, update_participant_count
+from i18n import t
 from storage import Event
 
 
@@ -30,10 +31,11 @@ class AutoThreadCog(commands.Cog):
             logging.info("Skipping #%s: category %s is not in the configured list", channel.name, channel.category_id)
             return
 
+        lang = self.bot.lang(channel.guild)
         logging.info("Creating update thread in #%s (%s)", channel.name, channel.id)
         try:
             thread = await channel.create_thread(
-                name=f"{channel.name}-updates", type=discord.ChannelType.private_thread, invitable=False,
+                name=f"{channel.name}-{t(lang, 'thread_suffix')}", type=discord.ChannelType.private_thread, invitable=False,
                 slowmode_delay=300,  # 5 minutes between messages per user
             )
         except discord.Forbidden:
@@ -58,7 +60,7 @@ class AutoThreadCog(commands.Cog):
         # Pinned message in the channel: the Join/Leave buttons plus the participant count,
         # which on_thread_member_join/remove keep up to date.
         try:
-            join_message = await channel.send(counter_text(0), view=join_view(thread.id))
+            join_message = await channel.send(counter_text(0, lang), view=join_view(thread.id, lang))
             event.join_message_id = join_message.id
             await join_message.pin()
         except discord.HTTPException:
@@ -84,7 +86,7 @@ class AutoThreadCog(commands.Cog):
         thread = self.bot.get_channel(thread_id)
         if thread is None:
             return
-        await update_participant_count(self.bot.store, thread)  # ignores threads we don't track
+        await update_participant_count(self.bot.store, thread, self.bot.lang(thread.guild))  # ignores threads we don't track
 
     @commands.Cog.listener()
     async def on_thread_member_join(self, member: discord.ThreadMember):

@@ -7,6 +7,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from checks import is_admin_or_mod
+from dates import parse_event_date
 from i18n import t
 from storage import Event
 
@@ -94,7 +95,10 @@ class EventsCog(commands.Cog):
             await interaction.followup.send(t(lang, "create_failed"))
             return
 
-        await interaction.followup.send(t(lang, "event_created", channel=channel.mention))
+        reply = t(lang, "event_created", channel=channel.mention)
+        if parse_event_date(date) is None:
+            reply += "\n" + t(lang, "date_unreadable")
+        await interaction.followup.send(reply)
 
     @create_event.error
     async def create_event_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError):

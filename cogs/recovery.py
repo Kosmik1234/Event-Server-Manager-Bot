@@ -44,6 +44,7 @@ class RecoveryCog(commands.Cog):
                             await self._restore(channel)
                         except discord.HTTPException:
                             logging.exception("Failed to restore event record for #%s", channel.name)
+        self.bot.dispatch("events_recovered")  # the archive sweep waits for this
 
     async def _find_thread(self, channel: discord.TextChannel) -> discord.Thread | None:
         """The private updates thread the bot created in this channel."""

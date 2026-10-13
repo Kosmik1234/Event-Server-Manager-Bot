@@ -13,3 +13,4 @@ MODERATOR_ROLE = os.environ.get("MODERATOR_ROLE", "Moderator")
 DEV_GUILD_ID = int(os.environ["DEV_GUILD_ID"]) if os.environ.get("DEV_GUILD_ID") else None
 EVENTS_FILE = os.environ.get("EVENTS_FILE", "data/events.json")
 GUILD_SETTINGS_FILE = os.environ.get("GUILD_SETTINGS_FILE", "data/guild_settings.json")
+TIMEZONE = os.environ.get("TIMEZONE", "Europe/Warsaw")  # event dates are compared against "today" in this zone

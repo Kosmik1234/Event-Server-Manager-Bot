@@ -42,5 +42,29 @@ class GuildSettingsStore:
         if category_id not in categories:
             return False
         categories.remove(category_id)
+        self._settings[str(guild_id)].get("archives", {}).pop(str(category_id), None)  # its archive link is meaningless now
+        self._flush()
+        return True
+
+    # archives: event category ID -> archive category ID. Several event categories may share
+    # one archive; each event category has at most one.
+    def get_archives(self, guild_id: int) -> dict[int, int]:
+        raw = self._settings.get(str(guild_id), {}).get("archives", {})
+        return {int(source): target for source, target in raw.items()}
+
+    def set_archive(self, guild_id: int, source_id: int, archive_id: int) -> bool:
+        """Returns False if the event category already has an archive."""
+        archives = self._settings.setdefault(str(guild_id), {}).setdefault("archives", {})
+        if str(source_id) in archives:
+            return False
+        archives[str(source_id)] = archive_id
+        self._flush()
+        return True
+
+    def remove_archive(self, guild_id: int, source_id: int) -> bool:
+        """Returns False if the event category had no archive."""
+        archives = self._settings.get(str(guild_id), {}).get("archives", {})
+        if archives.pop(str(source_id), None) is None:
+            return False
         self._flush()
         return True

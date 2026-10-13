@@ -35,6 +35,7 @@ class EventBot(commands.Bot):
         await self.load_extension("cogs.settings")
         await self.load_extension("cogs.join")
         await self.load_extension("cogs.auto_thread")
+        await self.load_extension("cogs.recovery")
         if config.DEV_GUILD_ID:
             guild = discord.Object(id=config.DEV_GUILD_ID)
             self.tree.copy_global_to(guild=guild)  # instant updates in your test server

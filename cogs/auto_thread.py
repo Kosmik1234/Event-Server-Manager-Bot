@@ -33,7 +33,8 @@ class AutoThreadCog(commands.Cog):
         logging.info("Creating update thread in #%s (%s)", channel.name, channel.id)
         try:
             thread = await channel.create_thread(
-                name=f"{channel.name}-updates", type=discord.ChannelType.private_thread, invitable=False
+                name=f"{channel.name}-updates", type=discord.ChannelType.private_thread, invitable=False,
+                slowmode_delay=300,  # 5 minutes between messages per user
             )
         except discord.Forbidden:
             logging.error(

@@ -7,6 +7,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from checks import is_admin_or_mod
+from cogs.auto_thread import setup_event_channel
 from dates import parse_event_date
 from i18n import t
 from storage import Event
@@ -80,7 +81,7 @@ class EventsCog(commands.Cog):
                 location=location, description=description, creator_id=interaction.user.id,
             )
             # Save BEFORE posting the message: the auto-thread listener fires as soon as the
-            # channel exists and looks this event up to link the thread and add the creator.
+            # channel exists and looks this event up to link the thread to it.
             self.bot.store.save(event)
             message = await channel.send(embed=build_embed(event, lang))  # Join button is added in the next step
             # Re-read: the listener may have added thread_id / join_message_id in the meantime.
@@ -99,6 +100,47 @@ class EventsCog(commands.Cog):
         if parse_event_date(date) is None:
             reply += "\n" + t(lang, "date_unreadable")
         await interaction.followup.send(reply)
+
+    @app_commands.command(name="make-event", description="Turn this channel into an event (admins/mods only)")
+    @app_commands.guild_only()
+    @app_commands.default_permissions(manage_guild=True)
+    @is_admin_or_mod()
+    async def make_event(self, interaction: discord.Interaction):
+        """Repair command for channels the bot never registered (created before it joined, or
+        moved into an event category)."""
+        lang = self.bot.lang(interaction.guild)
+        channel = interaction.channel
+        if not isinstance(channel, discord.TextChannel) or channel.category_id not in self.bot.guild_settings.get_categories(
+            interaction.guild_id
+        ):
+            await interaction.response.send_message(t(lang, "not_in_event_category"), ephemeral=True)
+            return
+
+        await interaction.response.defer(ephemeral=True)
+        existing = self.bot.store.get_by_channel(channel.id)
+        if existing is not None and existing.thread_id is not None:
+            try:
+                await interaction.guild.fetch_channel(existing.thread_id)
+            except discord.NotFound:
+                pass  # the thread was deleted: rebuild it
+            except discord.HTTPException:
+                logging.exception("Failed to check thread %s", existing.thread_id)
+                await interaction.followup.send(t(lang, "create_failed"))
+                return
+            else:
+                await interaction.followup.send(t(lang, "already_event"))
+                return
+
+        result = await setup_event_channel(self.bot, channel)
+        key = {"ok": "event_made", "forbidden": "no_permission"}.get(result, "create_failed")
+        await interaction.followup.send(t(lang, key))
+
+    @make_event.error
+    async def make_event_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError):
+        if isinstance(error, app_commands.CheckFailure):
+            await interaction.response.send_message(t(self.bot.lang(interaction.guild), "only_admins_change"), ephemeral=True)
+        else:
+            raise error
 
     @app_commands.command(name="set-date", description="Set the date of this event (admins/mods only)")
     @app_commands.describe(date="When it happens, e.g. 15.11.2026")

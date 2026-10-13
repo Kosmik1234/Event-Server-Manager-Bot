@@ -16,6 +16,51 @@ from i18n import t
 from storage import Event
 
 
+async def setup_event_channel(bot: commands.Bot, channel: discord.TextChannel) -> str:
+    """Turns a channel into an event: updates thread, stored record, pinned Join/Leave message.
+    Shared by the channel-create listener and /make-event. Nobody is added to the thread:
+    membership happens only through the Join/Leave buttons. Returns "ok", "forbidden" or "failed"."""
+    lang = bot.lang(channel.guild)
+    logging.info("Creating update thread in #%s (%s)", channel.name, channel.id)
+    try:
+        thread = await channel.create_thread(
+            name=f"{channel.name}-{t(lang, 'thread_suffix')}", type=discord.ChannelType.private_thread, invitable=False,
+            slowmode_delay=300,  # 5 minutes between messages per user
+        )
+    except discord.Forbidden:
+        logging.error(
+            "Missing permissions to create a thread in #%s (%s). The bot's role needs "
+            "Create Private Threads and Manage Threads here.", channel.name, channel.id,
+        )
+        return "forbidden"
+    except discord.HTTPException:
+        logging.exception("Failed to create update thread in #%s", channel.name)
+        return "failed"
+
+    logging.info("Created thread #%s (%s) in #%s", thread.name, thread.id, channel.name)
+
+    # Every channel with a thread gets a stored record. /create-event already saved one
+    # (with details); for channels made by hand we create a bare one.
+    event = bot.store.get_by_channel(channel.id) or Event(
+        channel_id=channel.id, guild_id=channel.guild.id, title=channel.name
+    )
+    event.thread_id = thread.id
+
+    # Pinned message in the channel: the Join/Leave buttons plus the participant count,
+    # which on_thread_member_join/remove keep up to date.
+    try:
+        join_message = await channel.send(counter_text(0, lang), view=join_view(thread.id, lang))
+        event.join_message_id = join_message.id
+        await join_message.pin()
+    except discord.HTTPException:
+        logging.exception("Failed to post or pin the join message in #%s", channel.name)
+
+    bot.store.save(event)
+    logging.info("Stored event for #%s (thread %s)", channel.name, thread.id)
+
+    return "ok"
+
+
 class AutoThreadCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -30,53 +75,7 @@ class AutoThreadCog(commands.Cog):
         if channel.category_id not in self.bot.guild_settings.get_categories(channel.guild.id):
             logging.info("Skipping #%s: category %s is not in the configured list", channel.name, channel.category_id)
             return
-
-        lang = self.bot.lang(channel.guild)
-        logging.info("Creating update thread in #%s (%s)", channel.name, channel.id)
-        try:
-            thread = await channel.create_thread(
-                name=f"{channel.name}-{t(lang, 'thread_suffix')}", type=discord.ChannelType.private_thread, invitable=False,
-                slowmode_delay=300,  # 5 minutes between messages per user
-            )
-        except discord.Forbidden:
-            logging.error(
-                "Missing permissions to create a thread in #%s (%s). The bot's role needs "
-                "Create Private Threads and Manage Threads here.", channel.name, channel.id,
-            )
-            return
-        except discord.HTTPException:
-            logging.exception("Failed to create update thread in #%s", channel.name)
-            return
-
-        logging.info("Created thread #%s (%s) in #%s", thread.name, thread.id, channel.name)
-
-        # Every channel with a thread gets a stored record. /create-event already saved one
-        # (with details); for channels made by hand we create a bare one.
-        event = self.bot.store.get_by_channel(channel.id) or Event(
-            channel_id=channel.id, guild_id=channel.guild.id, title=channel.name
-        )
-        event.thread_id = thread.id
-
-        # Pinned message in the channel: the Join/Leave buttons plus the participant count,
-        # which on_thread_member_join/remove keep up to date.
-        try:
-            join_message = await channel.send(counter_text(0, lang), view=join_view(thread.id, lang))
-            event.join_message_id = join_message.id
-            await join_message.pin()
-        except discord.HTTPException:
-            logging.exception("Failed to post or pin the join message in #%s", channel.name)
-
-        self.bot.store.save(event)  # saved before add_user so the counter update can find the message
-        logging.info("Stored event for #%s (thread %s)", channel.name, thread.id)
-
-        # A private thread is invisible to everyone not in it, so add the creator (when known);
-        # otherwise a mod without Manage Threads would never see it.
-        creator = channel.guild.get_member(event.creator_id) if event.creator_id else None
-        if creator is not None:
-            try:
-                await thread.add_user(creator)  # triggers on_thread_member_join, which updates the counter
-            except discord.HTTPException:
-                logging.exception("Could not add creator %s to thread %s", event.creator_id, thread.id)
+        await setup_event_channel(self.bot, channel)
 
     async def _handle_membership_change(self, thread_id: int):
         """Common path for on_thread_member_join/remove: recompute the participant counter.

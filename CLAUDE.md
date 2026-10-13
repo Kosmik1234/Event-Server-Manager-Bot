@@ -13,6 +13,7 @@ Bot Discord (Python, `discord.py>=2.6`) zarządzający serwerem poświęconym wy
 ## Komendy slash (wszystkie zmieniające wymagają admina lub roli `MODERATOR_ROLE`)
 
 - `/create-event title date location description` – tworzy kanał (w pierwszej istniejącej skonfigurowanej kategorii), embed ogłoszenia; @everyone widzi, ale nie pisze. `date` to wolny tekst.
+- `/make-event` – naprawcza: robi z bieżącego kanału (w kategorii wydarzeń) wydarzenie: rekord + wątek + wiadomość z przyciskami (wspólna funkcja `setup_event_channel` w `cogs/auto_thread.py`, używana też przez listener). Jeśli rekord ma wątek, który został usunięty, odtwarza go.
 - `/set-date date` – ustawia datę wydarzenia; działa w kanale wydarzenia lub w jego wątku; zapisuje w store i odświeża embed (jeśli jest). Pozwala archiwizować też kanały stworzone ręcznie.
 - `/event-category add|remove|list` – które kategorie są „kategoriami wydarzeń” (per serwer). `list` dostępne dla wszystkich.
 - `/archive-category add|remove|list` – mapowanie *kategoria wydarzeń → kategoria archiwum*. Kategoria wydarzeń ma max 1 archiwum, kilka może dzielić jedno. Kategoria nie może być jednocześnie wydarzeniową i archiwum (walidacja w obie strony). Usunięcie kategorii wydarzeń kasuje jej link do archiwum.
@@ -44,8 +45,8 @@ Deploy: `Procfile` (`worker: python main.py`), Railway; dane muszą leżeć na z
 
 ## Niuanse, o których łatwo zapomnieć
 
-- **Kolejność w `/create-event`**: rekord zapisujemy *przed* wysłaniem embeda, bo `on_guild_channel_create` odpala się od razu po utworzeniu kanału i szuka rekordu (żeby podpiąć wątek i dodać twórcę). Po wysłaniu embeda rekord jest czytany ponownie (listener mógł dopisać `thread_id`/`join_message_id`).
-- Wątek jest **prywatny** – niewidoczny dla nikogo poza dodanymi i osobami z Manage Threads; dlatego twórca jest dodawany automatycznie.
+- **Kolejność w `/create-event`**: rekord zapisujemy *przed* wysłaniem embeda, bo `on_guild_channel_create` odpala się od razu po utworzeniu kanału i szuka rekordu (żeby podpiąć wątek do rekordu). Po wysłaniu embeda rekord jest czytany ponownie (listener mógł dopisać `thread_id`/`join_message_id`).
+- Wątek jest **prywatny** i zawiera wyłącznie uczestników: nikt (także twórca wydarzenia i osoba wywołująca komendę) nie jest dodawany automatycznie, członkostwo tylko przez przyciski Join/Leave. Moderator bez Manage Threads nie zobaczy wątku, dopóki nie kliknie Join. `creator_id` jest tylko zapisywany w rekordzie.
 - Przyciski mają `thread_id` w `custom_id` (`join-event:<id>`, `leave-event:<id>`), więc działają po restarcie bez DB. Rejestracja przez `bot.add_dynamic_items` w `cogs/join.py:setup`.
 - Recovery: znajduje wątek jako prywatny wątek, którego właścicielem jest bot (także zarchiwizowane), czyta ostatnie 100 wiadomości bota; z embeda odczytuje title/description oraz `fields[0]`=data, `fields[1]`=miejsce (stąd kolejność pól w `build_embed` jest kontraktem!). `creator_id` nie da się odzyskać.
 - Archiwizacja pomija: nieczytelną datę, `event_date >= today` (czyli w dniu wydarzenia jeszcze nie), brak archiwum, usuniętą kategorię. Błąd (np. kategoria pełna – limit 50 kanałów) jest tylko logowany.

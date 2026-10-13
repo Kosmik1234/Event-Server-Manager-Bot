@@ -24,6 +24,9 @@ STRINGS: dict[str, dict[str, str]] = {
         "only_admins_create": "Only admins or moderators can create events.",
         "not_event_channel": "Use this command in an event channel or its updates thread.",
         "date_set": "Event date set to: {date}",
+        "not_in_event_category": "Use this command in a text channel inside an event category (see `/event-category list`).",
+        "already_event": "This channel is already an event.",
+        "event_made": "This channel is now an event. Set its date with `/set-date`.",
         # auto thread
         "thread_suffix": "updates",
         # event-category
@@ -72,6 +75,9 @@ STRINGS: dict[str, dict[str, str]] = {
         "only_admins_create": "Tylko administratorzy lub moderatorzy mogą tworzyć wydarzenia.",
         "not_event_channel": "Użyj tej komendy na kanale wydarzenia lub w jego wątku aktualizacji.",
         "date_set": "Ustawiono datę wydarzenia: {date}",
+        "not_in_event_category": "Użyj tej komendy na kanale tekstowym w kategorii wydarzeń (zobacz `/event-category list`).",
+        "already_event": "Ten kanał jest już wydarzeniem.",
+        "event_made": "Ten kanał jest teraz wydarzeniem. Ustaw jego datę przez `/set-date`.",
         "thread_suffix": "aktualizacje",
         "category_added": "Dodano {category} do dozwolonych kategorii wydarzeń.",
         "category_exists": "{category} jest już dozwolona.",

@@ -22,6 +22,8 @@ STRINGS: dict[str, dict[str, str]] = {
         "create_failed": "Something went wrong creating the channel. Check the bot's logs.",
         "event_created": "Event created: {channel}",
         "only_admins_create": "Only admins or moderators can create events.",
+        "not_event_channel": "Use this command in an event channel or its updates thread.",
+        "date_set": "Event date set to: {date}",
         # auto thread
         "thread_suffix": "updates",
         # event-category
@@ -68,6 +70,8 @@ STRINGS: dict[str, dict[str, str]] = {
         "create_failed": "Coś poszło nie tak podczas tworzenia kanału. Sprawdź logi bota.",
         "event_created": "Wydarzenie utworzone: {channel}",
         "only_admins_create": "Tylko administratorzy lub moderatorzy mogą tworzyć wydarzenia.",
+        "not_event_channel": "Użyj tej komendy na kanale wydarzenia lub w jego wątku aktualizacji.",
+        "date_set": "Ustawiono datę wydarzenia: {date}",
         "thread_suffix": "aktualizacje",
         "category_added": "Dodano {category} do dozwolonych kategorii wydarzeń.",
         "category_exists": "{category} jest już dozwolona.",

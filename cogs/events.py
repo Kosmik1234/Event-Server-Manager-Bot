@@ -100,10 +100,50 @@ class EventsCog(commands.Cog):
             reply += "\n" + t(lang, "date_unreadable")
         await interaction.followup.send(reply)
 
+    @app_commands.command(name="set-date", description="Set the date of this event (admins/mods only)")
+    @app_commands.describe(date="When it happens, e.g. 15.11.2026")
+    @app_commands.guild_only()
+    @app_commands.default_permissions(manage_guild=True)
+    @is_admin_or_mod()
+    async def set_date(self, interaction: discord.Interaction, date: str):
+        """Works in the event channel or in its updates thread."""
+        lang = self.bot.lang(interaction.guild)
+        store = self.bot.store
+        event = store.get_by_channel(interaction.channel_id) or store.get_by_thread(interaction.channel_id)
+        if event is None:
+            await interaction.response.send_message(t(lang, "not_event_channel"), ephemeral=True)
+            return
+
+        await interaction.response.defer(ephemeral=True)
+        event.date = date
+        store.save(event)
+
+        # Keep the announcement embed in sync (recovery reads the date back from it).
+        # Channels made by hand have no embed.
+        if event.message_id is not None:
+            channel = interaction.guild.get_channel(event.channel_id)
+            if channel is not None:
+                try:
+                    await channel.get_partial_message(event.message_id).edit(embed=build_embed(event, lang))
+                except discord.HTTPException:
+                    logging.exception("Failed to update the announcement embed in %s", event.channel_id)
+
+        reply = t(lang, "date_set", date=date)
+        if parse_event_date(date) is None:
+            reply += "\n" + t(lang, "date_unreadable")
+        await interaction.followup.send(reply)
+
     @create_event.error
     async def create_event_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError):
         if isinstance(error, app_commands.CheckFailure):
             await interaction.response.send_message(t(self.bot.lang(interaction.guild), "only_admins_create"), ephemeral=True)
+        else:
+            raise error
+
+    @set_date.error
+    async def set_date_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError):
+        if isinstance(error, app_commands.CheckFailure):
+            await interaction.response.send_message(t(self.bot.lang(interaction.guild), "only_admins_change"), ephemeral=True)
         else:
             raise error
 

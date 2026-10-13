@@ -15,7 +15,7 @@ import config
 from dates import parse_event_date
 
 
-class ArchiveCog(commands.Cog):
+class ArchiveSweepCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
@@ -55,4 +55,4 @@ class ArchiveCog(commands.Cog):
 
 
 async def setup(bot: commands.Bot):
-    await bot.add_cog(ArchiveCog(bot))
+    await bot.add_cog(ArchiveSweepCog(bot))

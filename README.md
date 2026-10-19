@@ -16,13 +16,14 @@ Wiadomości bota są po angielsku lub po polsku – język ustawia się per serw
 
 ## Komendy
 
-Komendy zmieniające cokolwiek wymagają uprawnienia **Administrator** albo roli z `MODERATOR_ROLE`. Domyślnie są też ukryte dla zwykłych członków (wymagają Manage Server w pickerze komend).
+Komendy zmieniające cokolwiek (wszystkie poza `/get-date` i `list`) wymagają uprawnienia **Administrator** albo roli z `MODERATOR_ROLE`. Domyślnie są też ukryte dla zwykłych członków (wymagają Manage Server w pickerze komend).
 
 | Komenda | Opis |
 |---|---|
 | `/create-event title date location description` | Tworzy kanał wydarzenia w pierwszej (wg kolejności na serwerze) istniejącej kategorii wydarzeń i publikuje embed z ogłoszeniem. @everyone widzi kanał, ale nie może pisać ani tworzyć wątków. `date` to dowolny tekst; jeśli bot nie umie z niego odczytać daty, ostrzega, że wydarzenie nie będzie archiwizowane. |
 | `/make-event` | Naprawcza: robi wydarzenie z bieżącego kanału (musi leżeć w kategorii wydarzeń) – np. kanału sprzed dodania bota albo przeniesionego do kategorii. Jeśli wątek wydarzenia został usunięty, tworzy go od nowa. |
 | `/set-date date` | Ustawia datę wydarzenia. Działa w kanale wydarzenia lub w jego wątku. Aktualizuje embed ogłoszenia, jeśli istnieje. Dzięki niej archiwizować da się też kanały utworzone ręcznie. |
+| `/get-date` | Dostępna dla wszystkich. Pokazuje (tylko wywołującemu) datę wydarzenia i jak bot ją odczytał – czyli datę, której używa archiwizacja – albo ostrzeżenie, że jest nieczytelna. Działa w kanale wydarzenia lub w jego wątku; komunikat „Use this command in an event channel…” oznacza, że bot nie ma rekordu tego kanału. |
 | `/event-category add\|remove\|list` | Które kategorie są kategoriami wydarzeń (per serwer). `list` dostępne dla wszystkich. Usunięcie kategorii kasuje też jej powiązanie z archiwum. |
 | `/archive-category add\|remove\|list` | Mapowanie *kategoria wydarzeń → kategoria archiwum*. Każda kategoria wydarzeń ma maks. jedno archiwum, kilka może dzielić to samo. Kategoria nie może być jednocześnie kategorią wydarzeń i archiwum. `list` dostępne dla wszystkich. |
 | `/language` | Język bota na serwerze: English / Polski. Bez ustawienia bot używa języka serwera z ustawień Discorda (polski → `pl`, wszystko inne → `en`). |
@@ -81,7 +82,7 @@ W [Discord Developer Portal](https://discord.com/developers/applications) → Bo
 | `checks.py` | `is_admin_or_mod()` – sprawdzenie uprawnień do komend. |
 | `dates.py` | `parse_event_date(text)` – odczyt daty z wolnego tekstu. |
 | `i18n.py` | Teksty `en`/`pl`, `t(lang, key, **kw)`, `from_locale`. |
-| `cogs/events.py` | `/create-event`, `/make-event`, `/set-date`, `build_embed`. |
+| `cogs/events.py` | `/create-event`, `/make-event`, `/set-date`, `/get-date`, `build_embed`. |
 | `cogs/settings.py` | `/event-category`, `/archive-category`, `/language`. |
 | `cogs/auto_thread.py` | `setup_event_channel` (wątek + przypięta wiadomość + rekord), listener tworzenia kanału, listenery licznika. |
 | `cogs/join.py` | Przyciski Join/Leave, `update_participant_count`. |

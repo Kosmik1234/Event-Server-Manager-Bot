@@ -175,6 +175,28 @@ class EventsCog(commands.Cog):
             reply += "\n" + t(lang, "date_unreadable")
         await interaction.followup.send(reply)
 
+    @app_commands.command(name="get-date", description="Show the date of this event")
+    @app_commands.guild_only()
+    async def get_date(self, interaction: discord.Interaction):
+        """Works in the event channel or in its updates thread. Also shows how the date was
+        parsed, since that is what the archive sweep uses."""
+        lang = self.bot.lang(interaction.guild)
+        store = self.bot.store
+        event = store.get_by_channel(interaction.channel_id) or store.get_by_thread(interaction.channel_id)
+        if event is None:
+            await interaction.response.send_message(t(lang, "not_event_channel"), ephemeral=True)
+            return
+
+        if not event.date:
+            reply = t(lang, "date_none")
+        else:
+            parsed = parse_event_date(event.date)
+            if parsed is None:
+                reply = t(lang, "date_get", date=event.date) + "\n" + t(lang, "date_unreadable")
+            else:
+                reply = t(lang, "date_get_parsed", date=event.date, parsed=parsed.strftime("%d.%m.%Y"))
+        await interaction.response.send_message(reply, ephemeral=True)
+
     @create_event.error
     async def create_event_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError):
         if isinstance(error, app_commands.CheckFailure):

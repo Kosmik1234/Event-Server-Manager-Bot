@@ -7,7 +7,7 @@ Opis projektu, komend, architektury i deployu jest w **`README.md`** – przeczy
 - Kod, komentarze, docstringi i commity po **angielsku**; rozmowa z użytkownikiem i dokumentacja (`README.md`, ten plik) po **polsku**.
 - Odpowiedzi krótkie i konkretne.
 - Po zmianie zachowania bota (komendy, przepływy, dane, env) zaktualizuj `README.md`, żeby zgadzał się z kodem.
-- Brak testów. Minimum przed commitem: `python -m py_compile *.py cogs/*.py`. Zachowania na Discordzie nie da się sprawdzić w kontenerze – powiedz wprost, co nie zostało przetestowane.
+- Testy: `pip install -r requirements-dev.txt`, potem `pytest`. Przed commitem uruchom `pytest` i `python -m py_compile *.py cogs/*.py`. Nowa logika = nowe testy w `tests/` (czyste moduły wprost, kod z Discordem na atrapach `MagicMock`/`AsyncMock`, bez `pytest-asyncio` – używamy `asyncio.run`). Testy nie zastępują sprawdzenia na prawdziwym Discordzie (uprawnienia, limity, wygląd) – powiedz wprost, co nie zostało przetestowane.
 - Pisz w stylu otaczającego kodu: proste funkcje, komentarze tłumaczące „dlaczego”, bez nadmiarowych abstrakcji.
 
 ## Checklisty

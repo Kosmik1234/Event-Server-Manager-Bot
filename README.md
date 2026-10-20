@@ -147,7 +147,16 @@ Przy pierwszym `on_ready` bot przechodzi po kanałach w kategoriach wydarzeń, k
 
 Pętla pomija wydarzenia, gdy: data jest nieczytelna lub dziś/w przyszłości, kanał nie istnieje lub nie ma kategorii, kategoria nie ma archiwum albo archiwum zostało usunięte. Błędy przenoszenia (np. brak uprawnień, kategoria pełna – limit 50 kanałów) są tylko logowane.
 
+## Testy
+
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
+
+Testy w `tests/` nie łączą się z Discordem. Czyste moduły (`dates`, `templates`, `storage`, `guild_settings`, `i18n`) są testowane wprost, a kod używający Discorda (pętla archiwizacji, `checks`, renderowanie i odświeżanie ogłoszeń) – na atrapach obiektów. Nie sprawdzają zachowania na prawdziwym serwerze: uprawnień bota, limitów Discorda, wyglądu wiadomości ani działania komend i przycisków.
+
 ## Ograniczenia
 
 - Nazwa kanału z tytułu zawiera tylko `[a-z0-9-]`, więc polskie znaki wypadają („Wędrówka” → `w-dr-wka`); pusty wynik → `event`.
-- Brak testów automatycznych.
+- Komendy slash, przyciski, listenery i odzyskiwanie danych nie mają jeszcze testów.

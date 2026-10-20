@@ -10,6 +10,15 @@ Opis projektu, komend, architektury i deployu jest w **`README.md`** – przeczy
 - Testy: `pip install -r requirements-dev.txt`, potem `pytest`. Przed commitem uruchom `pytest` i `python -m py_compile *.py cogs/*.py`. Nowa logika = nowe testy w `tests/` (czyste moduły wprost; komendy i przyciski przez `cog.komenda.callback(cog, interaction, ...)` z atrapami z `tests/conftest.py`; bez `pytest-asyncio` – używamy `run()` z conftestu, bo widoki i modale potrzebują działającej pętli). Testy nie zastępują sprawdzenia na prawdziwym Discordzie (uprawnienia, limity, wygląd) – powiedz wprost, co nie zostało przetestowane.
 - Pisz w stylu otaczającego kodu: proste funkcje, komentarze tłumaczące „dlaczego”, bez nadmiarowych abstrakcji.
 
+## Gałęzie
+
+- `main` – stabilna, to z niej bot jest wdrażany. **Nie merguj do `main` bez wyraźnej prośby użytkownika.**
+- `develop` – integracja nowych funkcji. Do `develop` trafia wszystko, co skończone.
+- Nowa funkcja: gałąź `claude/<nazwa>` utworzona z `develop`, po skończeniu merge do `develop` (nie do `main`).
+- `develop` → `main` dopiero, gdy `develop` jest stabilny: `pytest` zielone i zmiany sprawdzone na prawdziwym Discordzie. Merge z `--no-ff`, żeby dało się go cofnąć jednym `git revert -m 1`.
+- Poprawka produkcyjna (hotfix): gałąź z `main`, merge do `main` **i** do `develop`.
+- Gałęzie sesji (np. nazwane przez środowisko) traktuj jak gałęzie funkcji: wynik wraca do `develop`.
+
 ## Checklisty
 
 - Nowy tekst widoczny dla użytkownika → klucz w **obu** językach w `i18n.py` (`en` i `pl`).

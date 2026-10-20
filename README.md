@@ -158,6 +158,13 @@ Testy w `tests/` nie łączą się z Discordem. Czyste moduły (`dates`, `templa
 
 Nie sprawdzają zachowania na prawdziwym serwerze: uprawnień bota, limitów Discorda, wyglądu wiadomości ani tego, czy atrapy zgadzają się z prawdziwym API.
 
+## Praca z gałęziami
+
+- **`main`** – stabilna wersja, z której bot jest wdrażany.
+- **`develop`** – tu scalamy nowe funkcje. Każda powstaje na własnej gałęzi (`claude/<nazwa>`) odchodzącej od `develop` i wraca do `develop`.
+- **`develop` → `main`** tylko wtedy, gdy `develop` jest stabilny: testy przechodzą (`pytest`) i zmiany sprawdzono na prawdziwym serwerze Discorda. Merge z `--no-ff`, żeby w razie problemów dało się go cofnąć: `git revert -m 1 <commit merge'a>`.
+- **Poprawki produkcyjne:** gałąź z `main`, scalana do `main` i do `develop`.
+
 ## Ograniczenia
 
 - Nazwa kanału z tytułu zawiera tylko `[a-z0-9-]`, więc polskie znaki wypadają („Wędrówka” → `w-dr-wka`); pusty wynik → `event`.

@@ -5,7 +5,7 @@ later, write another class with the same methods and swap it in main.py.
 """
 import json
 from abc import ABC, abstractmethod
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 
@@ -23,6 +23,7 @@ class Event:
     message_id: int | None = None  # the announcement embed (set after it's posted)
     thread_id: int | None = None  # the updates thread (set by the auto-thread listener)
     join_message_id: int | None = None  # pinned message with the Join/Leave buttons and participant count
+    extra: dict[str, str] = field(default_factory=dict)  # custom fields for announcement templates (/set-field)
 
 
 class EventStore(ABC):

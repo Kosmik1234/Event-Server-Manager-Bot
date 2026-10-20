@@ -24,6 +24,21 @@ class GuildSettingsStore:
         self._settings.setdefault(str(guild_id), {})["language"] = language
         self._flush()
 
+    def get_template(self, guild_id: int) -> str | None:
+        """None if the server uses the default announcement format."""
+        return self._settings.get(str(guild_id), {}).get("event_template")
+
+    def set_template(self, guild_id: int, template: str) -> None:
+        self._settings.setdefault(str(guild_id), {})["event_template"] = template
+        self._flush()
+
+    def reset_template(self, guild_id: int) -> bool:
+        """Returns False if the server was already on the default."""
+        if self._settings.get(str(guild_id), {}).pop("event_template", None) is None:
+            return False
+        self._flush()
+        return True
+
     def get_categories(self, guild_id: int) -> list[int]:
         return self._settings.get(str(guild_id), {}).get("event_categories", [])
 

@@ -194,7 +194,7 @@ class EventsCog(commands.Cog):
         store = self.bot.store
         key = key.strip().lower()
         if key in CORE_KEYS or not EXTRA_KEY.fullmatch(key):
-            await interaction.response.send_message(t(lang, "field_bad_key", key=key), ephemeral=True)
+            await interaction.response.send_message(t(lang, "field_bad_key", field=key), ephemeral=True)
             return
         event = store.get_by_channel(interaction.channel_id) or store.get_by_thread(interaction.channel_id)
         if event is None:
@@ -208,7 +208,7 @@ class EventsCog(commands.Cog):
             event.extra.pop(key, None)
         store.save(event)
         await refresh_announcement(self.bot, event, interaction.guild)
-        await interaction.followup.send(t(lang, "field_set" if value else "field_cleared", key=key, value=value))
+        await interaction.followup.send(t(lang, "field_set" if value else "field_cleared", field=key, value=value))
 
     @app_commands.command(name="get-date", description="Show the date of this event")
     @app_commands.guild_only()

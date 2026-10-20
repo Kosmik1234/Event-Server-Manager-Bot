@@ -28,3 +28,10 @@ def test_from_locale():
     assert from_locale("en-US") == "en"
     assert from_locale("de") == i18n.DEFAULT
     assert from_locale(None) == i18n.DEFAULT
+
+
+def test_format_arguments_do_not_collide_with_t_parameters():
+    # t(lang, key, **kwargs) would raise "multiple values for argument" at runtime
+    for lang, strings in STRINGS.items():
+        for key, text in strings.items():
+            assert not _fields(text) & {"lang", "key"}, (lang, key)

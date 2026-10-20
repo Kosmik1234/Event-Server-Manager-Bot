@@ -74,9 +74,9 @@ STRINGS: dict[str, dict[str, str]] = {
         "template_reset": "Template reset to the default.",
         "template_already_default": "This server already uses the default template.",
         "template_applied": "Updated {count} announcement(s).",
-        "field_bad_key": "`{key}` isn't a valid custom field name. Use lowercase letters, digits and `_`, and not title/date/location/description (use `/set-date` for the date).",
-        "field_set": "Field `{key}` set to: {value}",
-        "field_cleared": "Field `{key}` cleared.",
+        "field_bad_key": "`{field}` isn't a valid custom field name. Use lowercase letters, digits and `_`, and not title/date/location/description (use `/set-date` for the date).",
+        "field_set": "Field `{field}` set to: {value}",
+        "field_cleared": "Field `{field}` cleared.",
     },
     "pl": {
         "field_when": "📅 Kiedy",
@@ -137,9 +137,9 @@ STRINGS: dict[str, dict[str, str]] = {
         "template_reset": "Przywrócono domyślny szablon.",
         "template_already_default": "Ten serwer już używa domyślnego szablonu.",
         "template_applied": "Zaktualizowano ogłoszeń: {count}.",
-        "field_bad_key": "`{key}` nie jest poprawną nazwą pola. Użyj małych liter, cyfr i `_`, ale nie title/date/location/description (datę ustawia `/set-date`).",
-        "field_set": "Ustawiono pole `{key}`: {value}",
-        "field_cleared": "Wyczyszczono pole `{key}`.",
+        "field_bad_key": "`{field}` nie jest poprawną nazwą pola. Użyj małych liter, cyfr i `_`, ale nie title/date/location/description (datę ustawia `/set-date`).",
+        "field_set": "Ustawiono pole `{field}`: {value}",
+        "field_cleared": "Wyczyszczono pole `{field}`.",
     },
 }
 

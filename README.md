@@ -154,9 +154,11 @@ pip install -r requirements-dev.txt
 pytest
 ```
 
-Testy w `tests/` nie łączą się z Discordem. Czyste moduły (`dates`, `templates`, `storage`, `guild_settings`, `i18n`) są testowane wprost, a kod używający Discorda (pętla archiwizacji, `checks`, renderowanie i odświeżanie ogłoszeń) – na atrapach obiektów. Nie sprawdzają zachowania na prawdziwym serwerze: uprawnień bota, limitów Discorda, wyglądu wiadomości ani działania komend i przycisków.
+Testy w `tests/` nie łączą się z Discordem. Czyste moduły (`dates`, `templates`, `storage`, `guild_settings`, `i18n`) są testowane wprost. Komendy slash, przyciski, modal szablonu, listenery i pętla archiwizacji – przez wywołanie ich funkcji bezpośrednio z atrapą `Interaction` (`tests/conftest.py`). Osobny test sprawdza, że każda komenda poza `/get-date` i `list` ma sprawdzenie uprawnień, jest ukryta dla zwykłych członków i działa tylko na serwerze, oraz że `custom_id` przycisków ma stały format.
+
+Nie sprawdzają zachowania na prawdziwym serwerze: uprawnień bota, limitów Discorda, wyglądu wiadomości ani tego, czy atrapy zgadzają się z prawdziwym API.
 
 ## Ograniczenia
 
 - Nazwa kanału z tytułu zawiera tylko `[a-z0-9-]`, więc polskie znaki wypadają („Wędrówka” → `w-dr-wka`); pusty wynik → `event`.
-- Komendy slash, przyciski, listenery i odzyskiwanie danych nie mają jeszcze testów.
+- Odzyskiwanie danych (`cogs/recovery.py`) nie ma testów – i tak wymaga przepisania pod szablony.

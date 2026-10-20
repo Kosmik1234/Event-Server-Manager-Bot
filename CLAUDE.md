@@ -7,7 +7,7 @@ Opis projektu, komend, architektury i deployu jest w **`README.md`** – przeczy
 - Kod, komentarze, docstringi i commity po **angielsku**; rozmowa z użytkownikiem i dokumentacja (`README.md`, ten plik) po **polsku**.
 - Odpowiedzi krótkie i konkretne.
 - Po zmianie zachowania bota (komendy, przepływy, dane, env) zaktualizuj `README.md`, żeby zgadzał się z kodem.
-- Testy: `pip install -r requirements-dev.txt`, potem `pytest`. Przed commitem uruchom `pytest` i `python -m py_compile *.py cogs/*.py`. Nowa logika = nowe testy w `tests/` (czyste moduły wprost, kod z Discordem na atrapach `MagicMock`/`AsyncMock`, bez `pytest-asyncio` – używamy `asyncio.run`). Testy nie zastępują sprawdzenia na prawdziwym Discordzie (uprawnienia, limity, wygląd) – powiedz wprost, co nie zostało przetestowane.
+- Testy: `pip install -r requirements-dev.txt`, potem `pytest`. Przed commitem uruchom `pytest` i `python -m py_compile *.py cogs/*.py`. Nowa logika = nowe testy w `tests/` (czyste moduły wprost; komendy i przyciski przez `cog.komenda.callback(cog, interaction, ...)` z atrapami z `tests/conftest.py`; bez `pytest-asyncio` – używamy `run()` z conftestu, bo widoki i modale potrzebują działającej pętli). Testy nie zastępują sprawdzenia na prawdziwym Discordzie (uprawnienia, limity, wygląd) – powiedz wprost, co nie zostało przetestowane.
 - Pisz w stylu otaczającego kodu: proste funkcje, komentarze tłumaczące „dlaczego”, bez nadmiarowych abstrakcji.
 
 ## Checklisty
@@ -33,3 +33,5 @@ Opis projektu, komend, architektury i deployu jest w **`README.md`** – przeczy
 - Wymagany privileged intent **Server Members** (`intents.members`).
 - Handlery `CheckFailure` przy `/event-category list` i `/archive-category list` to martwy kod (te komendy nie mają checka).
 - Część docstringów w kodzie nadal mówi o „updates thread” – to ten sam wątek uczestników.
+- Testy: `load_extension` podmienia moduły `cogs.*` w `sys.modules`; test, który go używa (`test_command_contract.py`), musi je przywrócić, inaczej `patch("cogs.x.y")` w innych testach trafi w inny moduł.
+- Argumenty `i18n.t` nie mogą nazywać się `lang` ani `key` (kolizja z parametrami funkcji) – pilnuje tego test w `test_i18n.py`.

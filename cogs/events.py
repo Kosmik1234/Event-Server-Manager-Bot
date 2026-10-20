@@ -11,6 +11,7 @@ from cogs.auto_thread import setup_event_channel
 from dates import parse_event_date
 from i18n import t
 from storage import Event
+from templates import EXTRA_KEY, CORE_KEYS, default_template, event_values, render_template
 
 
 def find_category(guild: discord.Guild, allowed_category_ids: list[int]) -> discord.CategoryChannel | None:
@@ -21,11 +22,25 @@ def find_category(guild: discord.Guild, allowed_category_ids: list[int]) -> disc
     return None
 
 
-def build_embed(event: Event, lang: str) -> discord.Embed:
-    embed = discord.Embed(title=event.title, description=event.description, color=discord.Color.blurple())
-    embed.add_field(name=t(lang, "field_when"), value=event.date, inline=True)
-    embed.add_field(name=t(lang, "field_where"), value=event.location, inline=True)
-    return embed
+def build_embed(event: Event, lang: str, template: str | None = None) -> discord.Embed:
+    """The announcement: the server's template (or the default) rendered into the description."""
+    text = render_template(template or default_template(lang), event_values(event))
+    return discord.Embed(description=text, color=discord.Color.blurple())
+
+
+async def refresh_announcement(bot: commands.Bot, event: Event, guild: discord.Guild) -> None:
+    """Re-renders the announcement embed from the event record. Channels made by hand have none."""
+    if event.message_id is None:
+        return
+    channel = guild.get_channel(event.channel_id)
+    if channel is None:
+        return
+    lang = bot.lang(guild)
+    template = bot.guild_settings.get_template(guild.id)
+    try:
+        await channel.get_partial_message(event.message_id).edit(embed=build_embed(event, lang, template))
+    except discord.HTTPException:
+        logging.exception("Failed to update the announcement embed in %s", event.channel_id)
 
 
 class EventsCog(commands.Cog):
@@ -83,7 +98,8 @@ class EventsCog(commands.Cog):
             # Save BEFORE posting the message: the auto-thread listener fires as soon as the
             # channel exists and looks this event up to link the thread to it.
             self.bot.store.save(event)
-            message = await channel.send(embed=build_embed(event, lang))  # Join button is added in the next step
+            template = self.bot.guild_settings.get_template(guild.id)
+            message = await channel.send(embed=build_embed(event, lang, template))  # Join button is added in the next step
             # Re-read: the listener may have added thread_id / join_message_id in the meantime.
             event = self.bot.store.get_by_channel(channel.id) or event
             event.message_id = message.id
@@ -160,20 +176,39 @@ class EventsCog(commands.Cog):
         event.date = date
         store.save(event)
 
-        # Keep the announcement embed in sync (recovery reads the date back from it).
-        # Channels made by hand have no embed.
-        if event.message_id is not None:
-            channel = interaction.guild.get_channel(event.channel_id)
-            if channel is not None:
-                try:
-                    await channel.get_partial_message(event.message_id).edit(embed=build_embed(event, lang))
-                except discord.HTTPException:
-                    logging.exception("Failed to update the announcement embed in %s", event.channel_id)
+        await refresh_announcement(self.bot, event, interaction.guild)
 
         reply = t(lang, "date_set", date=date)
         if parse_event_date(date) is None:
             reply += "\n" + t(lang, "date_unreadable")
         await interaction.followup.send(reply)
+
+    @app_commands.command(name="set-field", description="Set or clear a custom field of this event (admins/mods only)")
+    @app_commands.describe(key="Field name used as {key} in the announcement template", value="Leave empty to clear the field")
+    @app_commands.guild_only()
+    @app_commands.default_permissions(manage_guild=True)
+    @is_admin_or_mod()
+    async def set_field(self, interaction: discord.Interaction, key: str, value: str | None = None):
+        """Works in the event channel or in its updates thread."""
+        lang = self.bot.lang(interaction.guild)
+        store = self.bot.store
+        key = key.strip().lower()
+        if key in CORE_KEYS or not EXTRA_KEY.fullmatch(key):
+            await interaction.response.send_message(t(lang, "field_bad_key", key=key), ephemeral=True)
+            return
+        event = store.get_by_channel(interaction.channel_id) or store.get_by_thread(interaction.channel_id)
+        if event is None:
+            await interaction.response.send_message(t(lang, "not_event_channel"), ephemeral=True)
+            return
+
+        await interaction.response.defer(ephemeral=True)
+        if value:
+            event.extra[key] = value
+        else:
+            event.extra.pop(key, None)
+        store.save(event)
+        await refresh_announcement(self.bot, event, interaction.guild)
+        await interaction.followup.send(t(lang, "field_set" if value else "field_cleared", key=key, value=value))
 
     @app_commands.command(name="get-date", description="Show the date of this event")
     @app_commands.guild_only()
@@ -201,6 +236,13 @@ class EventsCog(commands.Cog):
     async def create_event_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError):
         if isinstance(error, app_commands.CheckFailure):
             await interaction.response.send_message(t(self.bot.lang(interaction.guild), "only_admins_create"), ephemeral=True)
+        else:
+            raise error
+
+    @set_field.error
+    async def set_field_error(self, interaction: discord.Interaction, error: app_commands.AppCommandError):
+        if isinstance(error, app_commands.CheckFailure):
+            await interaction.response.send_message(t(self.bot.lang(interaction.guild), "only_admins_change"), ephemeral=True)
         else:
             raise error
 

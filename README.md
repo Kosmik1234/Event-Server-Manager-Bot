@@ -24,9 +24,31 @@ Komendy zmieniające cokolwiek (wszystkie poza `/get-date` i `list`) wymagają u
 | `/make-event` | Naprawcza: robi wydarzenie z bieżącego kanału (musi leżeć w kategorii wydarzeń) – np. kanału sprzed dodania bota albo przeniesionego do kategorii. Jeśli wątek wydarzenia został usunięty, tworzy go od nowa. |
 | `/set-date date` | Ustawia datę wydarzenia. Działa w kanale wydarzenia lub w jego wątku. Aktualizuje embed ogłoszenia, jeśli istnieje. Dzięki niej archiwizować da się też kanały utworzone ręcznie. |
 | `/get-date` | Dostępna dla wszystkich. Pokazuje (tylko wywołującemu) datę wydarzenia i jak bot ją odczytał – czyli datę, której używa archiwizacja – albo ostrzeżenie, że jest nieczytelna. Działa w kanale wydarzenia lub w jego wątku; komunikat „Use this command in an event channel…” oznacza, że bot nie ma rekordu tego kanału. |
+| `/set-field key [value]` | Ustawia (lub czyści, gdy brak wartości) własne pole wydarzenia, np. `tickets`, używane w szablonie jako `{tickets}`. Działa w kanale wydarzenia lub w jego wątku. Nazwy `title`, `date`, `location`, `description` są zarezerwowane. |
+| `/event-template edit\|show\|preview\|reset\|apply` | Format ogłoszeń per serwer – patrz [Szablon ogłoszenia](#szablon-ogłoszenia). |
 | `/event-category add\|remove\|list` | Które kategorie są kategoriami wydarzeń (per serwer). `list` dostępne dla wszystkich. Usunięcie kategorii kasuje też jej powiązanie z archiwum. |
 | `/archive-category add\|remove\|list` | Mapowanie *kategoria wydarzeń → kategoria archiwum*. Każda kategoria wydarzeń ma maks. jedno archiwum, kilka może dzielić to samo. Kategoria nie może być jednocześnie kategorią wydarzeń i archiwum. `list` dostępne dla wszystkich. |
 | `/language` | Język bota na serwerze: English / Polski. Bez ustawienia bot używa języka serwera z ustawień Discorda (polski → `pl`, wszystko inne → `en`). |
+
+### Szablon ogłoszenia
+
+Wygląd embeda z ogłoszeniem to szablon tekstowy z placeholderami, renderowany do opisu embeda. Każdy serwer może mieć własny; domyślny (`templates.py`) odtwarza dawny wygląd – tytuł, opis, potem „Kiedy” i „Gdzie” (z etykietami w języku serwera):
+
+```
+# {title}
+{description}
+
+**📅 Kiedy:** {date}
+**📍 Gdzie:** {location}
+```
+
+- `/event-template edit` – otwiera okno z wieloliniowym edytorem (parametry komend slash nie pozwalają na entery), wypełnione obecnym szablonem.
+- `/event-template show` – pokazuje aktualny szablon, `preview` – podgląd z przykładowymi danymi, `reset` – powrót do domyślnego.
+- `/event-template apply` – przerenderowuje istniejące ogłoszenia (szablon zmienia tylko nowe i edytowane, dopóki go nie użyjesz).
+- Placeholdery: `{title}`, `{date}`, `{location}`, `{description}` oraz dowolne `{klucz}` (małe litery, cyfry, `_`) – pole własne, ustawiane per wydarzenie przez `/set-field` i trzymane w `Event.extra`.
+- Styl, kolejność i widoczność pól wynikają z szablonu: markdown Discorda (`**pogrubienie**`, `*kursywa*`, `# nagłówek`), kolejność linii, a ukrycie pola = nieumieszczenie go w szablonie.
+- **Linia, w której wszystkie placeholdery są puste, jest pomijana** – wydarzenie bez linku do biletów nie pokaże „🎟 Bilety:” z pustą wartością.
+- Wartości są podstawiane bez `str.format`, więc nawiasy klamrowe w opisie niczego nie psują. Wynik jest obcinany do 4096 znaków (limit opisu embeda).
 
 ### Format daty
 
@@ -82,7 +104,9 @@ W [Discord Developer Portal](https://discord.com/developers/applications) → Bo
 | `checks.py` | `is_admin_or_mod()` – sprawdzenie uprawnień do komend. |
 | `dates.py` | `parse_event_date(text)` – odczyt daty z wolnego tekstu. |
 | `i18n.py` | Teksty `en`/`pl`, `t(lang, key, **kw)`, `from_locale`. |
-| `cogs/events.py` | `/create-event`, `/make-event`, `/set-date`, `/get-date`, `build_embed`. |
+| `templates.py` | Domyślny szablon ogłoszenia, `render_template`, walidacja. |
+| `cogs/events.py` | `/create-event`, `/make-event`, `/set-date`, `/get-date`, `/set-field`, `build_embed`, `refresh_announcement`. |
+| `cogs/event_template.py` | `/event-template` (edit/show/preview/reset/apply). |
 | `cogs/settings.py` | `/event-category`, `/archive-category`, `/language`. |
 | `cogs/auto_thread.py` | `setup_event_channel` (wątek + przypięta wiadomość + rekord), listener tworzenia kanału, listenery licznika. |
 | `cogs/join.py` | Przyciski Join/Leave, `update_participant_count`. |
@@ -91,11 +115,11 @@ W [Discord Developer Portal](https://discord.com/developers/applications) → Bo
 
 ### Dane
 
-**Rekord wydarzenia** (`Event`, klucz = ID kanału): `channel_id`, `guild_id`, `title`, `date` (tekst), `location`, `description`, `creator_id`, `message_id` (embed ogłoszenia), `thread_id`, `join_message_id` (przypięta wiadomość z przyciskami).
+**Rekord wydarzenia** (`Event`, klucz = ID kanału): `channel_id`, `guild_id`, `title`, `date` (tekst), `location`, `description`, `creator_id`, `message_id` (embed ogłoszenia), `thread_id`, `join_message_id` (przypięta wiadomość z przyciskami), `extra` (słownik pól własnych do szablonu).
 
 Kanały utworzone ręcznie dostają tylko `title` = nazwa kanału i pustą datę – nie są archiwizowane, dopóki ktoś nie użyje `/set-date`.
 
-**Ustawienia serwera** (klucz = ID serwera): `event_categories` (lista ID), `archives` (ID kategorii wydarzeń → ID archiwum), `language`.
+**Ustawienia serwera** (klucz = ID serwera): `event_categories` (lista ID), `archives` (ID kategorii wydarzeń → ID archiwum), `language`, `event_template` (własny szablon ogłoszenia; brak = domyślny).
 
 Oba pliki są zapisywane w całości przy każdej zmianie – wystarcza przy małej skali. Przejście na bazę danych = nowa klasa implementująca `EventStore` podmieniona w `main.py`.
 
@@ -104,7 +128,7 @@ Oba pliki są zapisywane w całości przy każdej zmianie – wystarcza przy ma�
 1. Utworzenie kanału z uprawnieniami (everyone: bez pisania; bot: pisanie, wątki, przypinanie).
 2. Zapis rekordu – **przed** wysłaniem embeda, bo listener `on_guild_channel_create` startuje od razu i szuka rekordu, żeby dopisać do niego wątek.
 3. Listener tworzy wątek i przypiętą wiadomość z przyciskami, dopisuje `thread_id` i `join_message_id`.
-4. Wysłanie embeda (pola: najpierw data, potem miejsce), ponowny odczyt rekordu i dopisanie `message_id`.
+4. Wysłanie embeda wyrenderowanego z szablonu serwera, ponowny odczyt rekordu i dopisanie `message_id`.
 
 ### Przyciski
 
@@ -114,10 +138,10 @@ Przyciski są `DynamicItem`-ami z ID wątku w `custom_id` (`join-event:<thread_i
 
 Przy pierwszym `on_ready` bot przechodzi po kanałach w kategoriach wydarzeń, które nie mają rekordu. Dla każdego:
 - szuka prywatnego wątku utworzonego przez bota (także zarchiwizowanego); brak wątku → kanał pomijany,
-- czyta do 100 najstarszych wiadomości bota: wiadomość z przyciskiem `join-event:<id>` to `join_message_id`, pierwsza z embedem to ogłoszenie – z niego tytuł, opis, `fields[0]` = data, `fields[1]` = miejsce,
+- czyta do 100 najstarszych wiadomości bota: wiadomość z przyciskiem `join-event:<id>` to `join_message_id`, pierwsza z embedem to ogłoszenie (`message_id`),
 - zapisuje rekord i przelicza licznik.
 
-`creator_id` jest nie do odzyskania. Kanały już przeniesione do archiwum nie są odtwarzane (nie leżą w kategorii wydarzeń). Po zakończeniu bot wysyła event `events_recovered` – dopiero wtedy startuje pętla archiwizacji.
+`creator_id` jest nie do odzyskania. **Uwaga:** od wprowadzenia szablonów odzyskiwanie nie czyta już tytułu, daty ani miejsca z embeda (ogłoszenie nie ma już pól o stałej kolejności) – odtworzony rekord ma tytuł z nazwy kanału i puste pozostałe pola, a opis zawiera cały tekst ogłoszenia. Parsowanie embeda według szablonu serwera jest do zrobienia. Kanały już przeniesione do archiwum nie są odtwarzane (nie leżą w kategorii wydarzeń). Po zakończeniu bot wysyła event `events_recovered` – dopiero wtedy startuje pętla archiwizacji.
 
 ### Archiwizacja
 

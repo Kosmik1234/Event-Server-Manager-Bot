@@ -15,12 +15,15 @@ Opis projektu, komend, architektury i deployu jest w **`README.md`** – przeczy
 - Nowy tekst widoczny dla użytkownika → klucz w **obu** językach w `i18n.py` (`en` i `pl`).
 - Nowy cog → `load_extension` w `EventBot.setup_hook` (`main.py`).
 - Nowa komenda zmieniająca stan → `@app_commands.guild_only()`, `@app_commands.default_permissions(manage_guild=True)`, `@is_admin_or_mod()` oraz handler `.error` dla `CheckFailure`.
+- Nowe pole własne ogłoszenia → nie dodawaj pola do `Event`, tylko klucz w `Event.extra` (`/set-field`).
 - Nowe pole w `Event` → wartość domyślna (stare pliki JSON nie mają tego klucza) i przemyśl, czy recovery może je odtworzyć.
 - Nowe uprawnienie bota → dopisz do listy w `README.md` i do overwrites w `/create-event`.
 
 ## Pułapki
 
-- **Kolejność pól w `build_embed` to kontrakt**: `fields[0]` = data, `fields[1]` = miejsce – recovery czyta je po indeksie.
+- Ogłoszenie jest renderowane z szablonu (`templates.py`) do opisu embeda i nie ma pól o stałej kolejności. **Recovery (`cogs/recovery.py`) nadal czyta `fields[0]`/`fields[1]` i `embed.title`, więc po tej zmianie nie odzyska tytułu/daty/miejsca** – do naprawy przez parser według szablonu serwera.
+- Linia szablonu z samymi pustymi placeholderami jest pomijana (to celowe). Wartości podstawiamy regexem, nie `str.format`.
+- Odświeżanie ogłoszenia: zawsze przez `refresh_announcement` (`cogs/events.py`), nie ręcznym `edit(embed=...)`.
 - **`/create-event` zapisuje rekord przed wysłaniem embeda**, a po wysłaniu czyta go ponownie – listener `on_guild_channel_create` w międzyczasie dopisuje `thread_id`/`join_message_id`. Nie nadpisuj rekordu starą kopią.
 - Licznik aktualizują **tylko** listenery `on_thread_member_join` / `on_raw_thread_member_remove`, nie przyciski. Wersja *raw* przy usuwaniu jest celowa (nie-raw działa tylko dla członków w cache).
 - `custom_id` przycisków (`join-event:<id>`, `leave-event:<id>`) jest używany przez `DynamicItem` i przez recovery – zmiana formatu psuje stare wiadomości.
